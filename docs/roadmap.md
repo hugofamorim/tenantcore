@@ -1,6 +1,30 @@
 # Delivery roadmap
 
-## Verified baseline — 2026-10-20
+## Current acceptance — 2026-10-20
+
+M0–M3 are implemented and merged. M4's functional/local demonstration delivery
+is accepted: the maintainer reviewed it locally and confirmed the expected
+behavior. [PR #5](https://github.com/hugofamorim/tenantcore/pull/5) merged at
+`b512f8b0b6804fe1ba0a280983c882bc5d4424fd`; the
+[main CI](https://github.com/hugofamorim/tenantcore/actions/runs/39477710424)
+completed successfully for that exact commit.
+
+The accepted baseline includes 159 tests (40 API unit, 35 frontend, 79 HTTP/
+PostgreSQL and five browser journeys), lint, typecheck and production builds.
+The M4 local checks below also cover type generation without an existing `.next`,
+fresh database migrations, repeatable fictional seeding and proxy validation.
+These are acceptance results for the delivered implementation, not a promise
+that checks have been rerun for every subsequent documentation change.
+
+Public publication remains deferred by maintainer choice. This acceptance does
+not close M4's public-demo criterion, certify production readiness or begin M5.
+No release tag or public demo URL is claimed. See the prioritized follow-ups below
+and the [deployment procedure](operations/deployment.md).
+
+## Historical baseline — 2026-10-20
+
+The following M0–M3 notes preserve the evidence and branch state at each delivery;
+their references to open PRs are historical. PRs #1–#5 are now merged.
 
 TC-007 at `4c0e7a1fae7807a815b7d1c98e4cb13e565bf5c8` has passing lint,
 typecheck, two API unit tests and production builds locally and in
@@ -115,7 +139,7 @@ public demo or production deployment is claimed.
 
 ## M4 — Dashboard, robustness and local demonstration (TC-011)
 
-Implemented for review: verified OWNER/ADMIN live dashboard; member totals/by-role,
+Implemented and accepted locally: verified OWNER/ADMIN live dashboard; member totals/by-role,
 pending unexpired invitation records and five safe recent tenant activities.
 Personal display-name settings reject email/role/user assignment. Web has clear
 forbidden/missing/unavailable states, product landing page and responsive dashboard.
@@ -136,14 +160,46 @@ tests and five Chromium journeys (159 total); lint with no warnings, typecheck
 including without `.next`, production builds, Prisma validation/empty schema diff,
 OpenAPI YAML/internal references and Caddy configuration validation. Real demo
 CLI seeding twice and an HTTP login/metrics/isolation/probe smoke also passed.
-Published Linux acceptance is tracked in the TC-011 PR. Public hosting/DNS/SMTP,
+Published Linux acceptance passed for both the TC-011 branch and the merged main
+commit linked above. Public hosting/DNS/SMTP,
 trusted-ingress/edge abuse policy and external HTTPS acceptance are explicitly
 pending by maintainer choice. Operational outbox/retention/distributed limits and
 formal release licensing remain documented follow-ups. M4's public-demo criterion
 is not claimed complete, and M5 has not started.
 
-## Later milestones (planned)
+## Prioritized follow-ups (planned; no implementation started)
 
-- M4 release follow-up: choose host/domain, complete public-demo operating controls
-  and perform actual external HTTPS acceptance before publishing its URL.
-- M5: optional post-MVP extensions only after M1–M4 acceptance.
+### M4 release closure — deferred public publication
+
+1. Select host, domain, SMTP and a restricted fictional-demo enrollment policy.
+   Record the ingress trust boundary and abuse limits before exposing the app.
+2. Deploy to staging using the existing runbook, apply migrations once, and verify
+   backup restoration, process restarts and protected environment configuration.
+3. Run external HTTPS acceptance: certificate, secure cookies, Origin rejection,
+   verification/recovery, invitations, role/tenant denial and health probes.
+   Record the tested SHA, evidence and URL only after successful verification.
+4. Resolve the documented release licensing follow-up with an explicit maintainer
+   decision; align the repository license, package metadata and README.
+
+Hosting/publication remains deferred; do not create infrastructure, publish shared
+credentials or change the license implicitly to close this list.
+
+### M5 candidates — ordering for planning only
+
+M5 implementation remains gated on M1–M4 acceptance, including resolution of the
+deferred public-demo criterion or an explicit maintainer scope decision.
+Each candidate needs a separate issue, a small vertical delivery and an ADR when
+it changes persistence, security or operational dependencies.
+
+| Order | Candidate | Decision and acceptance before delivery |
+| --- | --- | --- |
+| 1 | Retention cleanup | Define retention per session/token/audit category; use bounded, repeatable batches; prove active records and tenant isolation are preserved. |
+| 2 | Durable mail outbox | Define encryption/key handling, retry/expiry and delivery semantics; test SMTP failure, restart recovery and duplicate handling without logging secrets. |
+| 3 | Rate-limit and ingress hardening | Choose the actual trusted proxy topology; add shared storage only for a justified deployment; test spoofed headers and independent visitor quotas. |
+| 4 | Operational metrics and load evidence | Choose safe bounded metrics and target workloads; measure latency/error behavior without collecting credentials or tenant payloads. |
+| 5 | Organization plans and limits | Define enforcement and concurrency semantics in an ADR; start without billing and test atomic quota checks across tenants. |
+
+MFA, OAuth/SSO, billing/webhooks and PostgreSQL RLS remain optional later
+explorations. They are not prerequisites for the accepted local MVP and are not
+represented as implemented. The next implementation should address one concrete
+need rather than introducing all operational infrastructure at once.
