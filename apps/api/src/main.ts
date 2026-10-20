@@ -1,10 +1,20 @@
+
 import { NestFactory } from '@nestjs/core';
-import { AppModule, ObserveInstrument } from './app.module';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    instrument: ObserveInstrument,
+  const app = await NestFactory.create(AppModule);
+
+  app.enableCors({
+    origin: 'http://localhost:3000',
+    credentials: true,
   });
+
   await app.listen(process.env.PORT ?? 3001);
+
+  console.log(
+    `🚀 TenantCore API running on http://localhost:${process.env.PORT ?? 3001}`,
+  );
 }
+
 void bootstrap();
