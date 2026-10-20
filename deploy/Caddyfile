@@ -1,0 +1,17 @@
+# Supply TENANTCORE_DOMAIN as a bare DNS name, with DNS pointing to this host.
+# Run API and Next on loopback; do not expose database, Mailpit or the API port.
+{$TENANTCORE_DOMAIN} {
+	header {
+		X-Content-Type-Options nosniff
+	}
+	@tokenPages path /verify-email /reset-password /invitations/accept
+	header @tokenPages {
+		Referrer-Policy no-referrer
+		Cache-Control no-store
+		X-Robots-Tag "noindex, nofollow"
+	}
+	@regularPages not path /verify-email /reset-password /invitations/accept
+	header @regularPages Referrer-Policy strict-origin-when-cross-origin
+	# Next preserves same-origin API rewrites and Cookie/Origin semantics.
+	reverse_proxy 127.0.0.1:3000
+}
