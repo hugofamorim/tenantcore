@@ -1,12 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  Activity,
+  ArrowRight,
+  Mail,
+  RefreshCw,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
+import {
+  LazyMotion,
+  domAnimation,
+  m,
+  MotionConfig,
+  useReducedMotion,
+} from "motion/react";
 import { getDashboard, type Dashboard } from "@/lib/dashboard";
 import { MembershipRequestError } from "@/lib/members";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AccessProblem } from "./access-problem";
 
-const labels: Record<string, string> = {
+const activityLabels: Record<string, string> = {
   "organization.created": "Organization created",
   "organization.updated": "Organization settings updated",
   "invitation.created": "Invitation created",
@@ -20,6 +38,232 @@ const labels: Record<string, string> = {
   "organization.ownership_transferred": "Ownership transferred",
   "demo.initialized": "Fictional demo initialized",
 };
+
+const roleDescriptions = {
+  OWNER: "Workspace ownership",
+  ADMIN: "Team administration",
+  MEMBER: "Workspace membership",
+  VIEWER: "Read-only access",
+};
+
+function MetricCard({
+  title,
+  value,
+  description,
+  href,
+  linkLabel,
+  icon,
+}: {
+  title: string;
+  value: number;
+  description: string;
+  href: string;
+  linkLabel: string;
+  icon: ReactNode;
+}) {
+  return (
+    <article>
+      <Card className="h-full gap-4 shadow-xs">
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-accent text-primary">
+            {icon}
+          </span>
+        </CardHeader>
+        <CardContent>
+          <p className="text-4xl font-semibold tracking-tight tabular-nums">
+            {value}
+          </p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
+          <Link
+            href={href}
+            className="mt-5 inline-flex items-center gap-2 rounded-sm text-sm font-medium text-primary hover:underline"
+          >
+            {linkLabel}
+            <ArrowRight className="size-3.5" aria-hidden="true" />
+          </Link>
+        </CardContent>
+      </Card>
+    </article>
+  );
+}
+
+function DashboardLoading() {
+  return (
+    <div>
+      <p role="status" className="mb-4 text-sm text-muted-foreground">
+        Loading dashboard…
+      </p>
+      <div aria-hidden="true" className="grid gap-5 sm:grid-cols-2">
+        {[0, 1].map((item) => (
+          <Card key={item} className="gap-4 shadow-xs">
+            <CardContent className="space-y-5">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-10 w-16" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-28" />
+            </CardContent>
+          </Card>
+        ))}
+        <Skeleton className="h-80 rounded-xl sm:col-span-2" />
+      </div>
+    </div>
+  );
+}
+
+function DashboardContent({
+  data,
+  organizationId,
+}: {
+  data: Dashboard;
+  organizationId: string;
+}) {
+  const reduceMotion = useReducedMotion();
+  const organizationPath = `/organizations/${organizationId}`;
+
+  return (
+    <LazyMotion features={domAnimation} strict>
+      <MotionConfig reducedMotion="user">
+        <m.div
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.2 }}
+          className="space-y-6"
+        >
+          <section
+            aria-label="Organization metrics"
+            className="grid gap-5 sm:grid-cols-2"
+          >
+            <MetricCard
+              title="Total members"
+              value={data.members}
+              description="People with access to this workspace."
+              href={`${organizationPath}/members`}
+              linkLabel="Manage members"
+              icon={<Users className="size-5" aria-hidden="true" />}
+            />
+            <MetricCard
+              title="Pending invitations"
+              value={data.pendingInvitations}
+              description="Pending records whose links have not expired."
+              href={`${organizationPath}/invitations`}
+              linkLabel="Manage invitations"
+              icon={<Mail className="size-5" aria-hidden="true" />}
+            />
+          </section>
+
+          <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+            <Card className="min-w-0 gap-0 shadow-xs">
+              <CardHeader className="gap-3 border-b pb-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="flex items-center gap-2 text-base font-semibold">
+                    <Activity
+                      className="size-4 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    Recent activity
+                  </h2>
+                  <Link
+                    href={`${organizationPath}/audit`}
+                    className="rounded-sm text-xs font-medium text-primary hover:underline"
+                  >
+                    View audit log
+                  </Link>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  The latest changes in your organization.
+                </p>
+              </CardHeader>
+              <CardContent className="pt-2">
+                {data.recentActivity.length ? (
+                  <ol aria-label="Recent activity" className="divide-y">
+                    {data.recentActivity.map((item) => (
+                      <li key={item.id} className="flex items-start gap-3 py-5">
+                        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border bg-background">
+                          <Activity
+                            className="size-3.5 text-muted-foreground"
+                            aria-hidden="true"
+                          />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">
+                            {activityLabels[item.action] ??
+                              "Organization activity"}
+                          </p>
+                          <time
+                            className="mt-1 block text-xs leading-5 text-muted-foreground"
+                            dateTime={item.createdAt}
+                          >
+                            {new Date(item.createdAt).toLocaleString()}
+                          </time>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <div className="py-10 text-center">
+                    <Activity
+                      className="mx-auto mb-3 size-6 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <p className="text-sm font-medium">No recent activity.</p>
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                      Organization changes will appear here.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="min-w-0 gap-0 shadow-xs">
+              <CardHeader className="gap-3 border-b pb-5">
+                <h2 className="flex items-center gap-2 text-base font-semibold">
+                  <ShieldCheck
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  Members by role
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Access within this workspace.
+                </p>
+              </CardHeader>
+              <CardContent className="pt-1">
+                <dl className="divide-y">
+                  {Object.entries(data.membersByRole).map(([role, total]) => (
+                    <div
+                      key={role}
+                      className="flex items-center justify-between gap-4 py-4"
+                    >
+                      <div>
+                        <dt className="text-xs font-semibold tracking-wide">
+                          {role}
+                        </dt>
+                        <dd className="mt-1 text-xs text-muted-foreground">
+                          {
+                            roleDescriptions[
+                              role as keyof typeof roleDescriptions
+                            ]
+                          }
+                        </dd>
+                      </div>
+                      <dd className="rounded-md bg-muted px-2.5 py-1 text-sm font-semibold tabular-nums">
+                        {total}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </CardContent>
+            </Card>
+          </div>
+        </m.div>
+      </MotionConfig>
+    </LazyMotion>
+  );
+}
+
 export function DashboardPanel({ organizationId }: { organizationId: string }) {
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState<{
@@ -28,6 +272,7 @@ export function DashboardPanel({ organizationId }: { organizationId: string }) {
   } | null>(null);
   const [revision, setRevision] = useState(0);
   const [pending, setPending] = useState(true);
+
   useEffect(() => {
     let active = true;
     getDashboard(organizationId)
@@ -56,115 +301,28 @@ export function DashboardPanel({ organizationId }: { organizationId: string }) {
       active = false;
     };
   }, [organizationId, revision]);
+
+  function refresh() {
+    setPending(true);
+    setError(null);
+    setRevision((value) => value + 1);
+  }
+
   return (
-    <div className="space-y-7" aria-busy={pending}>
+    <div className="space-y-6" aria-busy={pending}>
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Live organization metrics. Refresh to load the latest activity.
+        <p className="max-w-xl text-sm leading-6 text-muted-foreground">
+          A clear view of your team, access and recent changes.
         </p>
-        <button
-          disabled={pending}
-          className="rounded-lg border border-zinc-400 px-4 py-2 text-sm disabled:opacity-50"
-          onClick={() => {
-            setPending(true);
-            setRevision((value) => value + 1);
-          }}
-        >
+        <Button variant="outline" disabled={pending} onClick={refresh}>
+          <RefreshCw className="size-4" aria-hidden="true" />
           Refresh dashboard
-        </button>
+        </Button>
       </div>
-      {pending && <p role="status">Loading dashboard…</p>}
+      {pending && <DashboardLoading />}
       {error && <AccessProblem status={error.status} message={error.message} />}
-      {data && !error && (
-        <>
-          <section
-            aria-label="Organization metrics"
-            className="grid gap-4 sm:grid-cols-2"
-          >
-            <article className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
-              <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                Total members
-              </h2>
-              <p className="mt-3 text-4xl font-semibold tabular-nums">
-                {data.members}
-              </p>
-              <Link
-                href={`/organizations/${organizationId}/members`}
-                className="mt-4 inline-block text-sm text-blue-700 underline dark:text-blue-300"
-              >
-                Manage members
-              </Link>
-            </article>
-            <article className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
-              <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                Pending invitations
-              </h2>
-              <p className="mt-3 text-4xl font-semibold tabular-nums">
-                {data.pendingInvitations}
-              </p>
-              <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-                Pending records whose links have not expired.
-              </p>
-              <Link
-                href={`/organizations/${organizationId}/invitations`}
-                className="mt-3 inline-block text-sm text-blue-700 underline dark:text-blue-300"
-              >
-                Manage invitations
-              </Link>
-            </article>
-          </section>
-          <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
-            <h2 className="text-lg font-semibold">Members by role</h2>
-            <dl className="mt-5 grid grid-cols-2 gap-5 sm:grid-cols-4">
-              {Object.entries(data.membersByRole).map(([role, total]) => (
-                <div key={role}>
-                  <dt className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                    {role}
-                  </dt>
-                  <dd className="mt-2 text-2xl font-semibold tabular-nums">
-                    {total}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-          <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Recent activity</h2>
-              <Link
-                href={`/organizations/${organizationId}/audit`}
-                className="text-sm text-blue-700 underline dark:text-blue-300"
-              >
-                View audit log
-              </Link>
-            </div>
-            {data.recentActivity.length ? (
-              <ol
-                aria-label="Recent activity"
-                className="mt-4 divide-y divide-zinc-200 dark:divide-zinc-700"
-              >
-                {data.recentActivity.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex flex-wrap justify-between gap-3 py-4 text-sm"
-                  >
-                    <p>{labels[item.action] ?? "Organization activity"}</p>
-                    <time
-                      className="text-zinc-600 dark:text-zinc-400"
-                      dateTime={item.createdAt}
-                    >
-                      {new Date(item.createdAt).toLocaleString()}
-                    </time>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-                No recent activity.
-              </p>
-            )}
-          </section>
-        </>
+      {data && !pending && !error && (
+        <DashboardContent data={data} organizationId={organizationId} />
       )}
     </div>
   );
