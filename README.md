@@ -2,7 +2,8 @@
 
 An open-source SaaS reference built with Next.js, NestJS, PostgreSQL, Prisma and
 TypeScript. The goal is a well-tested multi-organization product; the current
-release implements personal identity, organizations, invitations and membership management.
+release implements personal identity, organizations, invitations, membership management
+and an administrative dashboard with live tenant metrics.
 
 ## What works today
 
@@ -12,10 +13,13 @@ release implements personal identity, organizations, invitations and membership 
 - Email verification, one-use password recovery and revocation of all sessions on reset.
 - Organization creation, membership-scoped list/details, per-tab switching and OWNER/ADMIN settings edits.
 - Email invitations, member role/removal policies, atomic ownership transfer and tenant audit.
+- OWNER/ADMIN dashboard with real member counts, pending invitations and recent activity.
+- Personal display-name settings, safe request IDs/JSON logs and minimal live/ready probes.
+- Explicit, repeatable fictional demo seed on a separate loopback database.
 - Argon2id passwords, hashed tokens, protected cookies, origin checks and request limits.
 - API unit/HTTP/database tests, React component tests and a real Chromium journey.
 
-Dashboard metrics and production demonstration/deployment are **planned**.
+Public demonstration/deployment remains **pending** by maintainer choice.
 Organization authorization applies to every implemented tenant route.
 Read the [roadmap](docs/roadmap.md).
 Existing domain tables are not equivalent to implemented tenant features.
@@ -44,6 +48,9 @@ Start the apps in separate terminals:
 pnpm --filter api start:dev
 pnpm --filter web dev
 ```
+
+The API binds to loopback by default (`API_HOST=127.0.0.1`). An explicit
+container-network bind is supported; do not expose internal services publicly.
 
 Open [registration](http://localhost:3000/register), create a fictional account,
 then sign in. `/account` shows the real API identity and supports renewal and
@@ -123,6 +130,35 @@ through tenant audit. No password, token, hash or raw request is audit metadata.
 [Mobile member table](docs/screenshots/members-mobile.png) scrolls inside its
 container while keeping navigation and page content within the viewport.
 
+## Dashboard and demonstration
+
+Owners/admins can open Dashboard from the workspace sidebar. It reports the
+tenant's actual membership total/by-role, pending unexpired invitation records
+and five recent organization audit activities. Pending does not promise the
+inviter still has permission; acceptance always rechecks it. MEMBER/VIEWER retain
+overview access and get 403 for administrative metrics; outsiders get the same
+404 as missing organizations. Refresh reloads data and an unavailable API shows
+an explicit error instead of invented metrics.
+
+The account page can update the caller's display name; email, credentials and
+tenant roles cannot be assigned through that form. Recovery remains the existing
+password-change flow. Unknown pages and denied workspaces have clear navigation
+back to the account/organizations.
+
+![Administrative dashboard captured from real API/browser activity](docs/screenshots/dashboard.png)
+
+[Mobile dashboard](docs/screenshots/dashboard-mobile.png).
+Use the [isolated local demo guide](docs/operations/local-demo.md) for three
+fictional identities, two organizations and different per-tenant roles, without
+touching development/test data. The seed requires an operator-selected fictional
+passphrase and refuses unsafe/non-fixture databases. It never runs during app
+startup and does not reset changed roles/passwords on rerun.
+
+[HTTPS deployment preparation](docs/operations/deployment.md) includes a Caddyfile
+validated with Caddy 2.11.7 and in CI. Hosting, DNS, real SMTP, trusted ingress,
+public demo access policy and external acceptance are pending; no public URL or
+production readiness is claimed.
+
 ## Quality checks
 
 ```sh
@@ -171,12 +207,12 @@ Browser tests start their own API on 3301 and web dev server on 3300, with no
 mock backend; keep those ports free. They use fictional accounts in the test
 database. Test Mailpit uses SMTP 11025 and inbox 18025; tests pick those defaults
 (CI explicitly uses 1025/8025). `SMTP_PORT` and `MAILPIT_URL` can override them.
-`test:e2e` runs the identity/organization project, stops its servers, then starts
-fresh servers for the collaboration project. This prevents independent fictional
+`test:e2e` runs identity/organization, collaboration and operations/dashboard
+projects, stopping/starting fresh servers between groups. This prevents independent fictional
 accounts on the same loopback IP exhausting one another's real rate-limit budget;
 no API limits are disabled or increased. For one journey, use
 `pnpm --filter web exec playwright test --project=collaboration` (or
-`--project=identity-and-organizations`). Both groups run in CI.
+`--project=identity-and-organizations` or `--project=operations`). All groups run in CI.
 The CI runs all these gates on Linux with PostgreSQL and SMTP. Unit tests need
 no running database. Unset test env variables before returning to development.
 
@@ -188,6 +224,9 @@ no running database. Unset test env variables before returning to development.
 - [Email verification/recovery ADR](docs/adr/0002-email-verification-and-recovery.md)
 - [Organization and tenant authorization ADR](docs/adr/0003-organizations-and-tenant-authorization.md)
 - [Invitation, membership and audit ADR](docs/adr/0004-invitations-membership-and-audit.md)
+- [Dashboard, telemetry and demo ADR](docs/adr/0005-dashboard-and-operational-boundaries.md)
+- [Local fictional demonstration](docs/operations/local-demo.md)
+- [HTTPS deployment and rollback runbook](docs/operations/deployment.md)
 - [OpenAPI contract](docs/api/openapi.yaml)
 - [Roadmap and verified baseline](docs/roadmap.md)
 
