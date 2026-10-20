@@ -95,4 +95,5 @@ model Membership {
 
   @@unique([userId, organizationId])
   @@index([organizationId])
+  @@index([userId, createdAt, id])
 }
