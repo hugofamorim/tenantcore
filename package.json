@@ -1,0 +1,30 @@
+{
+  "name": "tenantcore",
+  "version": "1.0.0",
+  "description": "Open-source multi-tenant SaaS built with Next.js, NestJS, PostgreSQL and TypeScript.",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.14.0",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.14.0",
+  "type": "module",
+  "devDependencies": {
+    "turbo": "latest",
+    "typescript": "latest"
+  }
+}
