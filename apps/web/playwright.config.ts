@@ -8,6 +8,12 @@ if (!database || new URL(database).pathname !== "/tenantcore_test") {
 export default defineConfig({
   testDir: "./test/e2e", fullyParallel: false, workers: 1, timeout: 60_000,
   retries: process.env.CI ? 1 : 0, reporter: "list",
+  // The script invokes projects separately so each gets a fresh API rate-limit
+  // store. Browser contexts alone share the same loopback IP and server limits.
+  projects: [
+    { name: "identity-and-organizations", testIgnore: "**/members.spec.ts" },
+    { name: "collaboration", testMatch: "**/members.spec.ts" },
+  ],
   use: { baseURL: "http://127.0.0.1:3300", ...devices["Desktop Chrome"] },
   webServer: [
     {
