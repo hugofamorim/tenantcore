@@ -7,8 +7,9 @@ import { authMutation, currentUser, type PublicUser } from "@/lib/auth";
 import { navigateAfterAuth } from "@/lib/auth-navigation";
 import { getOrganization, listOrganizations, OrganizationRequestError, type Organization, type OrganizationPage } from "@/lib/organizations";
 import { OrganizationForm } from "./organization-form";
+import { MembershipPanel, type ManagementSection } from "./membership-panel";
 
-export function OrganizationsPanel({ organizationId, settings = false }: { organizationId?: string; settings?: boolean }) {
+export function OrganizationsPanel({ organizationId, settings = false, section }: { organizationId?: string; settings?: boolean; section?: ManagementSection }) {
   const router = useRouter();
   const selectorId = useId();
   const [user, setUser] = useState<PublicUser | null>(null);
@@ -66,7 +67,8 @@ export function OrganizationsPanel({ organizationId, settings = false }: { organ
       <nav aria-label="Workspace navigation" className="mt-6 flex flex-col gap-3 text-sm">
         <Link href="/organizations" className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Organizations</Link>
         {selected && <><Link href={`/organizations/${selected.id}`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Overview</Link>
-          <Link href={`/organizations/${selected.id}/settings`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Settings</Link></>}
+          <Link href={`/organizations/${selected.id}/settings`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Settings</Link>
+          {(selected.role === 'OWNER' || selected.role === 'ADMIN') && <><Link href={`/organizations/${selected.id}/members`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Members</Link><Link href={`/organizations/${selected.id}/invitations`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Invitations</Link><Link href={`/organizations/${selected.id}/audit`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Audit log</Link></>}</>}
         <Link href="/account" className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Your account</Link>
       </nav>
       {choices.length > 0 && <div className="mt-6">
@@ -106,8 +108,8 @@ export function OrganizationsPanel({ organizationId, settings = false }: { organ
         </section>
       </>}
       {selected && <>
-        <div className="mb-7 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold tracking-tight">{settings ? "Organization settings" : selected.name}</h1><span className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium dark:border-zinc-600">{selected.role}</span></div>
-        {settings ? <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900"><OrganizationForm key={selected.updatedAt} existing={selected} onComplete={saved} /></section> :
+        <div className="mb-7 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold tracking-tight">{section ? section === 'audit' ? 'Audit log' : section === 'members' ? 'Organization members' : 'Organization invitations' : settings ? "Organization settings" : selected.name}</h1><span className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium dark:border-zinc-600">{selected.role}</span></div>
+        {section && user ? <MembershipPanel key={`${selected.id}-${section}`} organization={selected} userId={user.id} section={section} /> : settings ? <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900"><OrganizationForm key={selected.updatedAt} existing={selected} onComplete={saved} /></section> :
           <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900"><h2 className="text-lg font-semibold">Organization details</h2>
             <dl className="mt-5 space-y-4"><div><dt className="text-sm text-zinc-600 dark:text-zinc-400">Slug</dt><dd className="mt-1">{selected.slug}</dd></div>
               <div><dt className="text-sm text-zinc-600 dark:text-zinc-400">Your role</dt><dd className="mt-1">{selected.role}</dd></div>
