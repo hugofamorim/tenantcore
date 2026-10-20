@@ -7,6 +7,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailActionPurpose, Prisma } from '../generated/prisma/client';
 import { PasswordService } from './password.service';
+import { audit } from '../audit/audit';
 import { LoginDto, RegisterDto } from './auth.dto';
 import { EmailActionsService } from './email-actions.service';
 import { isSecret as validToken, newSecret, tokenHash } from './auth.tokens';
@@ -102,6 +103,7 @@ export class AuthService implements OnModuleInit {
           expiresAt,
         },
       });
+      await audit(tx, found.id, null, 'auth.login_succeeded', 'user', found.id);
       return { tokens, expiresAt };
     });
     if (!result) throw new UnauthorizedException('Invalid email or password');
@@ -207,6 +209,9 @@ export class AuthService implements OnModuleInit {
         },
         data: { revokedAt: new Date() },
       });
+      for (const userId of new Set(sessions.map((session) => session.userId))) {
+        await audit(tx, userId, null, 'auth.logout', 'user', userId);
+      }
     });
   }
 }

@@ -81,5 +81,5 @@ jobs:
       - name: Install test browser
         run: pnpm --filter web exec playwright install --with-deps chromium
 
-      - name: Browser authentication journey
+      - name: Browser identity, tenant and collaboration journeys
         run: pnpm --filter web test:e2e

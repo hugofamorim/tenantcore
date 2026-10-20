@@ -20,6 +20,13 @@ import { EmailActionsService } from './email-actions.service';
     MailService,
     EmailActionsService,
   ],
-  exports: [AuthService, AuthCookies, AuthOriginGuard, SessionGuard, ThrottlerModule],
+  exports: [
+    AuthService,
+    AuthCookies,
+    AuthOriginGuard,
+    SessionGuard,
+    ThrottlerModule,
+    MailService,
+  ],
 })
 export class AuthModule {}

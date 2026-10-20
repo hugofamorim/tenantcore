@@ -58,7 +58,9 @@ adds only EmailAction and its purpose enum/indexes/foreign key.
 
 Identity is personal, outside tenant scope. M2 adds verified-email-gated
 organization creation/list/details/settings with server-validated memberships
-and roles. Invitations and member mutations remain M3. PostgreSQL RLS is not
+and roles. M3 implements verified-email-matched invitations, member mutations,
+ownership transfer and transactional audit. Personal login/logout events carry
+no tenant and are excluded from tenant audit reads. PostgreSQL RLS is not
 implemented. Unverified personal identity grants no tenant access. See
 [organization boundaries](tenancy.md), the [roadmap](../roadmap.md) and
 [session ADR](../adr/0001-authentication-and-sessions.md).
