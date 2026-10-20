@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: tenantcore
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: tenantcore_test
+    ports:
+      - "127.0.0.1:55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tenantcore -d tenantcore_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
