@@ -12,7 +12,7 @@ export default defineConfig({
   webServer: [
     {
       command: "pnpm --dir ../api start:prod", url: "http://127.0.0.1:3301/health", reuseExistingServer: false,
-      env: { DATABASE_URL: database, NODE_ENV: "test", PORT: "3301", WEB_ORIGIN: "http://127.0.0.1:3300" },
+      env: { DATABASE_URL: database, NODE_ENV: "test", PORT: "3301", WEB_ORIGIN: "http://127.0.0.1:3300", SMTP_PORT: process.env.SMTP_PORT ?? "11025" },
     },
     {
       command: "pnpm exec next dev --hostname 127.0.0.1 -p 3300", url: "http://127.0.0.1:3300/login", reuseExistingServer: false,

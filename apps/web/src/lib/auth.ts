@@ -5,7 +5,9 @@ export interface PublicUser {
   emailVerifiedAt: string | null;
 }
 
-export async function authMutation(path: "login" | "register" | "refresh" | "logout", body: object = {}) {
+export type AuthMutation = "login" | "register" | "refresh" | "logout" | "verify-email" | "resend-verification" | "forgot-password" | "reset-password";
+
+export async function authMutation(path: AuthMutation, body: object = {}) {
   const response = await fetch(`/api/auth/${path}`, {
     method: "POST", credentials: "same-origin", cache: "no-store",
     headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -13,6 +15,7 @@ export async function authMutation(path: "login" | "register" | "refresh" | "log
   if (!response.ok) {
     if (response.status === 429) throw new Error("Too many attempts. Please wait a minute and try again.");
     if (response.status === 401) throw new Error("Your email, password or session was not accepted.");
+    if (response.status === 400 && (path === "verify-email" || path === "reset-password")) throw new Error("This link is invalid or expired. Please request a new email.");
     if (response.status === 400) throw new Error("Please check your details and try again.");
     throw new Error("We could not complete your request. Please try again.");
   }

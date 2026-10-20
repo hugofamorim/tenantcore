@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authMutation, currentUser, renewSession, type PublicUser } from "@/lib/auth";
+import { navigateAfterAuth } from "@/lib/auth-navigation";
 
 export function AccountPanel() {
   const router = useRouter();
@@ -21,11 +22,12 @@ export function AccountPanel() {
     return () => { active = false; };
   }, [router]);
 
-  async function action(kind: "refresh" | "logout") {
+  async function action(kind: "refresh" | "logout" | "resend-verification") {
     setPending(true); setError(""); setNotice("");
     try {
       if (kind === "refresh") { await renewSession(); setNotice("Your session has been renewed."); }
-      else { await authMutation("logout"); router.replace("/login"); router.refresh(); }
+      else if (kind === "resend-verification" && user) { await authMutation(kind, { email: user.email }); setNotice("If your account is eligible, a verification email will arrive shortly."); }
+      else { await authMutation("logout"); navigateAfterAuth("/login"); }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Please try again.");
     } finally { setPending(false); }
@@ -40,6 +42,7 @@ export function AccountPanel() {
         <div><dt className="text-sm text-zinc-600 dark:text-zinc-400">Email status</dt><dd className="mt-1">{user.emailVerifiedAt ? "Verified" : "Not verified"}</dd></div>
       </dl>
       <div className="flex flex-wrap gap-3">
+        {!user.emailVerifiedAt && <button className="rounded-lg border border-zinc-400 px-4 py-2 disabled:opacity-60" disabled={pending} onClick={() => void action("resend-verification")}>Send verification email</button>}
         <button className="rounded-lg bg-blue-700 px-4 py-2 text-white disabled:opacity-60" disabled={pending} onClick={() => void action("refresh")}>Renew session</button>
         <button className="rounded-lg border border-zinc-400 px-4 py-2 disabled:opacity-60" disabled={pending} onClick={() => void action("logout")}>Sign out</button>
       </div>

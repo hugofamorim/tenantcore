@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { authMutation } from "@/lib/auth";
+import { navigateAfterAuth } from "@/lib/auth-navigation";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
-  const router = useRouter();
   const register = mode === "register";
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -25,7 +24,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       });
       form.reset();
       if (register) setComplete(true);
-      else { router.replace("/account"); router.refresh(); }
+      else navigateAfterAuth("/account");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Please try again.");
     } finally { setPending(false); }
@@ -34,6 +33,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   if (complete) return (
     <div className="space-y-5">
       <p role="status">If this email is available, your account has been created. You can now sign in.</p>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">Check your inbox for a verification email.</p>
       <Link className="font-medium underline underline-offset-4" href="/login">Continue to sign in</Link>
     </div>
   );
@@ -56,6 +56,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         {register && <p id="password-help" className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Use 15–128 characters. A long, unique passphrase works well.</p>}
       </div>
       {error && <p role="alert" className="rounded-lg border border-red-400 p-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
+      {!register && <Link className="block text-sm underline underline-offset-4" href="/forgot-password">Forgot your password?</Link>}
       <button className="w-full rounded-lg bg-blue-700 px-4 py-3 font-medium text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 disabled:opacity-60" disabled={pending} type="submit">
         {pending ? "Please wait…" : register ? "Create account" : "Sign in"}
       </button>

@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { AuthForm } from "./auth-form";
 
-const { replace, refresh } = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, refresh }) }));
+const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
+vi.mock("@/lib/auth-navigation", () => ({ navigateAfterAuth: replace }));
 
 describe("account forms", () => {
   it("submits a registration with accessible fields and safe confirmation", async () => {
