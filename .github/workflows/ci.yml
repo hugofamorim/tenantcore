@@ -46,6 +46,9 @@ jobs:
           node --version
           pnpm --version
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Generate Prisma Client
         run: pnpm --filter api exec prisma generate
 
