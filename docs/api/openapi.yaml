@@ -1,0 +1,258 @@
+openapi: 3.1.0
+info:
+  title: TenantCore API
+  version: 0.2.0
+  description: M1 personal identity, rotating sessions, email verification and password recovery.
+servers:
+  - url: http://localhost:3001
+paths:
+  /health:
+    get:
+      summary: Check API and database availability
+      responses:
+        '200':
+          description: Database reachable
+        '503':
+          description: Database unavailable
+  /auth/register:
+    post:
+      summary: Create a personal account without starting a session
+      description: Email is trimmed/lowercased. Existing email receives the same response and its password is never replaced.
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/Credentials'
+                - type: object
+                  required: [name]
+                  properties:
+                    name: { type: string, minLength: 2, maxLength: 80 }
+      responses:
+        '202':
+          description: Generic account creation confirmation
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message: { type: string }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '403': { $ref: '#/components/responses/OriginRejected' }
+        '429': { $ref: '#/components/responses/Throttled' }
+  /auth/login:
+    post:
+      summary: Verify credentials and set fresh access/refresh cookies
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Credentials' }
+      responses:
+        '204': { $ref: '#/components/responses/SessionCookies' }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/OriginRejected' }
+        '429': { $ref: '#/components/responses/Throttled' }
+  /auth/me:
+    get:
+      summary: Read the authenticated personal account
+      security: [{ accessCookie: [] }]
+      responses:
+        '200':
+          description: Public user projection; Cache-Control is no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/Throttled' }
+  /auth/refresh:
+    post:
+      summary: Rotate both cookies within the original seven-day lifetime
+      description: Reusing a revoked refresh token revokes its entire family. Concurrent renewals count as replay.
+      security: [{ refreshCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody: { $ref: '#/components/requestBodies/EmptyJson' }
+      responses:
+        '204': { $ref: '#/components/responses/SessionCookies' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/OriginRejected' }
+        '429': { $ref: '#/components/responses/Throttled' }
+  /auth/logout:
+    post:
+      summary: Revoke the current family and clear cookies (idempotent)
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody: { $ref: '#/components/requestBodies/EmptyJson' }
+      responses:
+        '204':
+          description: Cookies cleared, including when there was no session
+        '403': { $ref: '#/components/responses/OriginRejected' }
+        '429': { $ref: '#/components/responses/Throttled' }
+  /auth/resend-verification:
+    post:
+      summary: Request a new verification email
+      description: Same generic 202 for eligible, unknown, verified, cooldown and delivery failure cases. Does not promise delivery.
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody: { $ref: '#/components/requestBodies/EmailRequest' }
+      responses:
+        '202': { $ref: '#/components/responses/EmailQueued' }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '403': { $ref: '#/components/responses/OriginRejected' }
+        '429': { $ref: '#/components/responses/Throttled' }
+  /auth/forgot-password:
+    post:
+      summary: Request password recovery without disclosing account existence
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody: { $ref: '#/components/requestBodies/EmailRequest' }
+      responses:
+        '202': { $ref: '#/components/responses/EmailQueued' }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '403': { $ref: '#/components/responses/OriginRejected' }
+        '429': { $ref: '#/components/responses/Throttled' }
+  /auth/verify-email:
+    post:
+      summary: Consume a one-use, 30-minute email verification token
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailToken' }
+      responses:
+        '204': { description: Email ownership verified; no session is created }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '403': { $ref: '#/components/responses/OriginRejected' }
+        '429': { $ref: '#/components/responses/Throttled' }
+  /auth/reset-password:
+    post:
+      summary: Reset credentials and revoke all sessions and outstanding email tokens
+      description: Requires a one-use 15-minute reset token. Also proves email ownership. Login is required afterwards.
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/EmailToken'
+                - type: object
+                  required: [password]
+                  properties:
+                    password: { type: string, minLength: 15, maxLength: 128, writeOnly: true }
+      responses:
+        '204': { description: Password updated and cookies cleared; no auto-login }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '403': { $ref: '#/components/responses/OriginRejected' }
+        '429': { $ref: '#/components/responses/Throttled' }
+components:
+  securitySchemes:
+    accessCookie:
+      type: apiKey
+      in: cookie
+      name: tc_access
+      description: __Host-tc_access in HTTPS production; HttpOnly, SameSite=Lax, expires after 15 minutes.
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: tc_refresh
+      description: __Host-tc_refresh in HTTPS production; HttpOnly, SameSite=Lax, seven-day absolute lifetime.
+  parameters:
+    Origin:
+      in: header
+      name: Origin
+      required: true
+      schema: { type: string, format: uri }
+      description: Must exactly match WEB_ORIGIN. Cookies are not sufficient for mutations.
+  requestBodies:
+    EmailRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [email]
+            properties:
+              email: { type: string, format: email, maxLength: 254 }
+    EmptyJson:
+      required: true
+      content:
+        application/json:
+          schema: { type: object }
+  schemas:
+    EmailToken:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, pattern: '^[A-Za-z0-9_-]{43}$', writeOnly: true }
+    Credentials:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 15, maxLength: 128, writeOnly: true }
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, name, email, emailVerifiedAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        emailVerifiedAt: { type: [string, 'null'], format: date-time }
+    Error:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode: { type: integer }
+        message:
+          oneOf:
+            - { type: string }
+            - { type: array, items: { type: string } }
+        error: { type: string }
+  responses:
+    EmailQueued:
+      description: Generic response; queue is bounded/in-process and delivery is not guaranteed. Cache-Control is no-store.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [message]
+            properties:
+              message: { type: string }
+    SessionCookies:
+      description: Empty body; access and refresh Set-Cookie headers. Cache-Control is no-store.
+      headers:
+        Set-Cookie:
+          schema: { type: string }
+          description: Two host-only, Path=/, HttpOnly, SameSite=Lax cookies; Secure in production.
+    Invalid:
+      description: Invalid input or unknown fields; no submitted secret is echoed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Invalid credentials or absent/expired/revoked session
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    OriginRejected:
+      description: Missing or foreign Origin
+    Throttled:
+      description: Too many requests; 20/minute/endpoint/IP (60 for me, 5 for forgot-password/resend-verification). Email issuance also has a 60-second recipient/purpose cooldown.

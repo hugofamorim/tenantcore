@@ -12,6 +12,11 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
+      mailpit:
+        image: axllent/mailpit:v1.31.6
+        ports:
+          - 1025:1025
+          - 8025:8025
       postgres:
         image: postgres:17
         env:
@@ -29,6 +34,9 @@ jobs:
     env:
       DATABASE_URL: postgresql://tenantcore:test_password@localhost:5432/tenantcore_test
       NODE_ENV: test
+      SMTP_HOST: localhost
+      SMTP_PORT: 1025
+      MAILPIT_URL: http://localhost:8025
 
     steps:
       - name: Checkout repository
@@ -64,5 +72,14 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: HTTP and database integration tests
+        run: pnpm --filter api test:e2e
+
       - name: Build
         run: pnpm build
+
+      - name: Install test browser
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: Browser authentication journey
+        run: pnpm --filter web test:e2e

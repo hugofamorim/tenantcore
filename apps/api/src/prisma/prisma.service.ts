@@ -1,7 +1,7 @@
 import {
     Injectable,
     OnModuleInit,
-    OnModuleDestroy,
+    OnApplicationShutdown,
   } from '@nestjs/common';
   import { ConfigService } from '@nestjs/config';
   import { PrismaClient } from '../generated/prisma/client';
@@ -10,7 +10,7 @@ import {
   @Injectable()
   export class PrismaService
     extends PrismaClient
-    implements OnModuleInit, OnModuleDestroy
+    implements OnModuleInit, OnApplicationShutdown
   {
     constructor(config: ConfigService) {
       const connectionString =
@@ -25,7 +25,7 @@ import {
       await this.$connect();
     }
   
-    async onModuleDestroy() {
+    async onApplicationShutdown() {
       await this.$disconnect();
     }
   }
