@@ -11,8 +11,9 @@ export default defineConfig({
   // The script invokes projects separately so each gets a fresh API rate-limit
   // store. Browser contexts alone share the same loopback IP and server limits.
   projects: [
-    { name: "identity-and-organizations", testIgnore: "**/members.spec.ts" },
+    { name: "identity-and-organizations", testIgnore: ["**/members.spec.ts", "**/dashboard.spec.ts"] },
     { name: "collaboration", testMatch: "**/members.spec.ts" },
+    { name: "operations", testMatch: "**/dashboard.spec.ts" },
   ],
   use: { baseURL: "http://127.0.0.1:3300", ...devices["Desktop Chrome"] },
   webServer: [

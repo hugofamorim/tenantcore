@@ -667,6 +667,127 @@ describe('M3 invitation lifecycle, membership hierarchy and atomic ownership', (
     await accept('invitee', 'a'.repeat(43)).expect(429);
   });
 
+  it.each(['owner', 'admin'])(
+    'returns real tenant dashboard metrics for %s without raw audit metadata or personal auth events',
+    async (actor) => {
+      for (const [index, status] of [
+        'PENDING',
+        'PENDING',
+        'REVOKED',
+        'ACCEPTED',
+      ].entries()) {
+        await prisma.invitation.create({
+          data: {
+            organizationId,
+            email: email(`pending-${index}`),
+            role: 'VIEWER',
+            tokenHash: tokenHash(randomUUID()),
+            status: status as 'PENDING' | 'REVOKED' | 'ACCEPTED',
+            expiresAt: new Date(Date.now() + (index === 1 ? -60_000 : 60_000)),
+          },
+        });
+      }
+      await prisma.invitation.create({
+        data: {
+          organizationId: foreignId,
+          email: email('foreign-pending'),
+          role: 'MEMBER',
+          tokenHash: tokenHash(randomUUID()),
+          expiresAt: new Date(Date.now() + 60_000),
+        },
+      });
+      for (let index = 0; index < 7; index++)
+        await prisma.auditEvent.create({
+          data: {
+            organizationId,
+            actorId: ids.owner,
+            action: 'fixture.activity',
+            resource: 'organization',
+            resourceId: organizationId,
+            metadata: { private: 'must-not-be-on-dashboard' },
+          },
+        });
+      const response = await read(actor, 'dashboard').expect(200);
+      expect(response.body).toEqual({
+        members: 4,
+        membersByRole: { OWNER: 1, ADMIN: 1, MEMBER: 1, VIEWER: 1 },
+        pendingInvitations: 1,
+        recentActivity: expect.arrayContaining([
+          expect.objectContaining({ action: 'fixture.activity' }),
+        ]),
+      });
+      const dashboard = response.body as { recentActivity: object[] };
+      expect(dashboard.recentActivity).toHaveLength(5);
+      expect(Object.keys(dashboard.recentActivity[0]).sort()).toEqual([
+        'action',
+        'createdAt',
+        'id',
+        'resource',
+      ]);
+      expect(JSON.stringify(response.body)).not.toMatch(
+        /must-not-be-on-dashboard|auth.login|tokenHash|passwordHash|example.test/,
+      );
+      expect(response.headers['cache-control']).toBe('no-store');
+      await read(actor, 'dashboard', foreignId)
+        .set('X-Organization-Id', organizationId)
+        .expect(404);
+    },
+  );
+
+  it.each(['member', 'viewer', 'outsider', 'unverified'])(
+    'denies %s access to administrative metrics',
+    async (actor) => {
+      await read(actor, 'dashboard').expect(actor === 'outsider' ? 404 : 403);
+      await request(app.getHttpServer()).get(path('dashboard')).expect(401);
+    },
+  );
+
+  it('changes only the authenticated personal name, rejects mass assignment and keeps tenant authorization intact', async () => {
+    const response = await mutation('owner', 'patch', '/auth/me', {
+      name: '  New display name  ',
+    }).expect(200);
+    expect(response.body).toEqual({
+      user: expect.objectContaining({
+        id: ids.owner,
+        name: 'New display name',
+        email: email('owner'),
+      }),
+    });
+    await mutation('owner', 'patch', '/auth/me', {
+      name: 'Override',
+      userId: ids.admin,
+      role: 'OWNER',
+      email: email('admin'),
+    }).expect(400);
+    await mutation('owner', 'patch', '/auth/me', { name: null }).expect(400);
+    await mutation('owner', 'patch', '/auth/me', { name: ' ' }).expect(400);
+    expect(
+      (await prisma.user.findUniqueOrThrow({ where: { id: ids.admin } })).name,
+    ).toBe('admin');
+    expect(
+      (
+        await prisma.membership.findUniqueOrThrow({
+          where: { id: memberships.owner },
+        })
+      ).role,
+    ).toBe('OWNER');
+    const event = await prisma.auditEvent.findFirstOrThrow({
+      where: { actorId: ids.owner, action: 'account.name_updated' },
+    });
+    expect(event.organizationId).toBeNull();
+    expect(event.metadata).toEqual({ fields: ['name'] });
+    await request(app.getHttpServer())
+      .patch('/auth/me')
+      .set('Origin', origin)
+      .send({ name: 'Anon' })
+      .expect(401);
+    await request(app.getHttpServer())
+      .patch('/auth/me')
+      .set('Cookie', sessions.owner)
+      .send({ name: 'No origin' })
+      .expect(403);
+  });
+
   it('requires verified identity and preserves CSRF validation on acceptance and destructive operations', async () => {
     const invitation = await invite('owner', 'unverified');
     await accept('unverified', invitation.token).expect(403);

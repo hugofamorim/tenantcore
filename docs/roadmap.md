@@ -80,11 +80,14 @@ desktop/mobile rendering and outsider denial. The new forms use unique IDs so
 Next.js retained hidden pages cannot attach labels to another form. The PR records
 the final published SHA and Linux CI result. No production deployment is claimed.
 
-## M3 — Invitations, members and audit (implemented; TC-010 acceptance pending)
+## M3 — Invitations, members and audit (implemented and merged)
 
 TC-010 starts from merged M2/main `8e66061`. The initial baseline passed lint,
 typecheck, 14 API/19 web unit tests, 45 HTTP/PostgreSQL tests and both builds.
 ADR 0004 defines hierarchy, invitation lifecycle, ownership and audit boundaries.
+
+PR #4 is merged at `3eb31fe`; its main CI 39457342787 passed. Historical milestone
+notes above describe the branch state at the time; PRs #1–#3 are also merged.
 
 - Implemented: email invitation before/after account creation, verified matching
   recipient acceptance, one-use hash/expiry, duplicate protection, reissue/revoke.
@@ -110,7 +113,37 @@ records the published SHA and final Linux CI result.
 No durable mail outbox, audit retention/external sink, organization deletion,
 public demo or production deployment is claimed.
 
+## M4 — Dashboard, robustness and local demonstration (TC-011)
+
+Implemented for review: verified OWNER/ADMIN live dashboard; member totals/by-role,
+pending unexpired invitation records and five safe recent tenant activities.
+Personal display-name settings reject email/role/user assignment. Web has clear
+forbidden/missing/unavailable states, product landing page and responsive dashboard.
+
+Operational implementation: fresh server request IDs, bounded safe JSON request/
+error logs, sanitized parser/internal failures, minimal live/ready probes and
+bounded PostgreSQL readiness queries. API binds to loopback by default. No new
+schema or dependency was necessary; existing migrations are retained.
+
+Demonstration/preparation: guarded fictional seed, independent Compose services,
+repeat-run/preservation tests on a freshly migrated temporary database, local demo
+guide, contribution guidance, OpenAPI and HTTPS/rollback runbook with a Caddyfile.
+Local smoke verified fictional login/metrics, role/tenant denial and probes. The
+proxy config validates with Caddy 2.11.7 without opening ports or requesting certs.
+
+Local acceptance passed: 40 API unit, 35 frontend unit/component, 79 HTTP/database
+tests and five Chromium journeys (159 total); lint with no warnings, typecheck
+including without `.next`, production builds, Prisma validation/empty schema diff,
+OpenAPI YAML/internal references and Caddy configuration validation. Real demo
+CLI seeding twice and an HTTP login/metrics/isolation/probe smoke also passed.
+Published Linux acceptance is tracked in the TC-011 PR. Public hosting/DNS/SMTP,
+trusted-ingress/edge abuse policy and external HTTPS acceptance are explicitly
+pending by maintainer choice. Operational outbox/retention/distributed limits and
+formal release licensing remain documented follow-ups. M4's public-demo criterion
+is not claimed complete, and M5 has not started.
+
 ## Later milestones (planned)
 
-- M4: real dashboard, accessibility, deploy/demo and operational hardening.
+- M4 release follow-up: choose host/domain, complete public-demo operating controls
+  and perform actual external HTTPS acceptance before publishing its URL.
 - M5: optional post-MVP extensions only after M1–M4 acceptance.

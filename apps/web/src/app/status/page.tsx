@@ -8,8 +8,7 @@ async function checkHealth(): Promise<HealthResponse | null> {
 
   try {
     return await getApiHealth();
-  } catch (error) {
-    console.error('API health check failed:', error);
+  } catch {
     return null;
   }
 }
@@ -43,14 +42,10 @@ async function StatusContent() {
             <dd>{health.service}</dd>
           </div>
 
-          <div>
-            <dt className="text-sm text-gray-500">Database</dt>
-            <dd>{health.database}</dd>
-          </div>
         </dl>
       ) : (
         <p className="mt-2 text-sm text-gray-500">
-          The API or database could not be reached.
+          The service could not be reached. Please try again shortly.
         </p>
       )}
     </div>

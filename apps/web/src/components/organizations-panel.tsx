@@ -8,14 +8,17 @@ import { navigateAfterAuth } from "@/lib/auth-navigation";
 import { getOrganization, listOrganizations, OrganizationRequestError, type Organization, type OrganizationPage } from "@/lib/organizations";
 import { OrganizationForm } from "./organization-form";
 import { MembershipPanel, type ManagementSection } from "./membership-panel";
+import { DashboardPanel } from './dashboard-panel';
+import { AccessProblem } from './access-problem';
 
-export function OrganizationsPanel({ organizationId, settings = false, section }: { organizationId?: string; settings?: boolean; section?: ManagementSection }) {
+export function OrganizationsPanel({ organizationId, settings = false, section, dashboard = false }: { organizationId?: string; settings?: boolean; section?: ManagementSection; dashboard?: boolean }) {
   const router = useRouter();
   const selectorId = useId();
   const [user, setUser] = useState<PublicUser | null>(null);
   const [page, setPage] = useState<OrganizationPage | null>(null);
   const [selected, setSelected] = useState<Organization | null>(null);
   const [error, setError] = useState("");
+  const [errorStatus, setErrorStatus] = useState<number>();
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -33,7 +36,7 @@ export function OrganizationsPanel({ organizationId, settings = false, section }
     void load().catch((cause: unknown) => {
       if (!active) return;
       if (cause instanceof OrganizationRequestError && cause.status === 401) navigateAfterAuth("/login");
-      else setError(cause instanceof Error ? cause.message : "Please try again.");
+      else { setError(cause instanceof Error ? cause.message : "Please try again."); setErrorStatus(cause instanceof OrganizationRequestError ? cause.status : undefined); }
     });
     return () => { active = false; };
   }, [organizationId]);
@@ -67,6 +70,7 @@ export function OrganizationsPanel({ organizationId, settings = false, section }
       <nav aria-label="Workspace navigation" className="mt-6 flex flex-col gap-3 text-sm">
         <Link href="/organizations" className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Organizations</Link>
         {selected && <><Link href={`/organizations/${selected.id}`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Overview</Link>
+          {(selected.role === 'OWNER' || selected.role === 'ADMIN') && <Link href={`/organizations/${selected.id}/dashboard`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Dashboard</Link>}
           <Link href={`/organizations/${selected.id}/settings`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Settings</Link>
           {(selected.role === 'OWNER' || selected.role === 'ADMIN') && <><Link href={`/organizations/${selected.id}/members`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Members</Link><Link href={`/organizations/${selected.id}/invitations`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Invitations</Link><Link href={`/organizations/${selected.id}/audit`} className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Audit log</Link></>}</>}
         <Link href="/account" className="rounded-lg px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800">Your account</Link>
@@ -86,8 +90,7 @@ export function OrganizationsPanel({ organizationId, settings = false, section }
       </div>}
     </aside>
     <main className="w-full min-w-0 max-w-5xl flex-1 p-5 sm:p-9" aria-busy={pending}>
-      {error && <div className="mb-6 rounded-xl border border-red-400 bg-white p-4 dark:bg-zinc-900"><p role="alert" className="text-red-700 dark:text-red-300">{error}</p>
-        <div className="mt-3 flex gap-4 text-sm"><button className="underline" onClick={() => window.location.reload()}>Try again</button><Link href="/organizations" className="underline">Back to organizations</Link></div></div>}
+      {error && <div className="mb-6"><AccessProblem status={errorStatus} message={error} /><button className="mt-3 text-sm underline" onClick={() => window.location.reload()}>Try again</button></div>}
       {notice && <p role="status" className="mb-5 rounded-lg border border-green-500 p-3 text-sm">{notice}</p>}
       {!user && !error && <p role="status">Loading your workspace…</p>}
       {user && !user.emailVerifiedAt && <section className="rounded-xl border border-zinc-300 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
@@ -108,8 +111,8 @@ export function OrganizationsPanel({ organizationId, settings = false, section }
         </section>
       </>}
       {selected && <>
-        <div className="mb-7 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold tracking-tight">{section ? section === 'audit' ? 'Audit log' : section === 'members' ? 'Organization members' : 'Organization invitations' : settings ? "Organization settings" : selected.name}</h1><span className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium dark:border-zinc-600">{selected.role}</span></div>
-        {section && user ? <MembershipPanel key={`${selected.id}-${section}`} organization={selected} userId={user.id} section={section} /> : settings ? <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900"><OrganizationForm key={selected.updatedAt} existing={selected} onComplete={saved} /></section> :
+        <div className="mb-7 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold tracking-tight">{dashboard ? 'Dashboard' : section ? section === 'audit' ? 'Audit log' : section === 'members' ? 'Organization members' : 'Organization invitations' : settings ? "Organization settings" : selected.name}</h1><span className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium dark:border-zinc-600">{selected.role}</span></div>
+        {dashboard ? <DashboardPanel key={selected.id} organizationId={selected.id} /> : section && user ? <MembershipPanel key={`${selected.id}-${section}`} organization={selected} userId={user.id} section={section} /> : settings ? <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900"><OrganizationForm key={selected.updatedAt} existing={selected} onComplete={saved} /></section> :
           <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900"><h2 className="text-lg font-semibold">Organization details</h2>
             <dl className="mt-5 space-y-4"><div><dt className="text-sm text-zinc-600 dark:text-zinc-400">Slug</dt><dd className="mt-1">{selected.slug}</dd></div>
               <div><dt className="text-sm text-zinc-600 dark:text-zinc-400">Your role</dt><dd className="mt-1">{selected.role}</dd></div>

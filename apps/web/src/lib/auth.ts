@@ -21,6 +21,12 @@ export async function authMutation(path: AuthMutation, body: object = {}) {
   }
 }
 
+export async function updateAccountName(name: string) {
+  const response = await fetch('/api/auth/me', { method: 'PATCH', credentials: 'same-origin', cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+  if (!response.ok) throw new Error(response.status === 400 ? 'Use a display name of 2–80 characters.' : response.status === 429 ? 'Too many attempts. Please wait a minute.' : 'Your account could not be updated. Please try again or sign in again.');
+}
+
 let renewal: Promise<void> | null = null;
 
 export async function renewSession() {

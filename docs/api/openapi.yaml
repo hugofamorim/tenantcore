@@ -1,11 +1,31 @@
 openapi: 3.1.0
 info:
   title: TenantCore API
-  version: 0.4.0
+  version: 0.5.0
   description: Personal identity, rotating sessions, email verification/recovery, organizations, invitations, membership hierarchy, ownership and tenant audit. All management reads require OWNER/ADMIN and verified identity. All mutations require exact Origin and application/json, including DELETE with an empty JSON object. Management limits are 60/minute/endpoint/IP, except sending/reissuing and acceptance at 10/minute. Tenant responses are no-store.
 servers:
   - url: http://localhost:3001
 paths:
+  /live:
+    get:
+      summary: Minimal process liveness without dependency access
+      responses:
+        '200':
+          description: Process can serve requests; no dependency/version information
+          content:
+            application/json:
+              schema: { type: object, required: [status], properties: { status: { type: string, const: ok } } }
+  /ready:
+    get:
+      summary: Minimal bounded PostgreSQL readiness
+      description: Transaction acquisition/query timeouts are bounded. This does not prove SMTP delivery or production capacity. Replies include server-generated X-Request-Id and Cache-Control no-store.
+      responses:
+        '200':
+          description: Database reachable; no connection details
+          content:
+            application/json:
+              schema: { type: object, required: [status], properties: { status: { type: string, const: ok } } }
+        '503': { description: Generic service unavailability without database diagnostics }
   /health:
     get:
       summary: Check API and database availability
@@ -61,6 +81,35 @@ paths:
         '403': { $ref: '#/components/responses/OriginRejected' }
         '429': { $ref: '#/components/responses/Throttled' }
   /auth/me:
+    patch:
+      summary: Update only the authenticated account's display name
+      description: Requires the existing session and exact Origin. Email, password, user IDs, tenant IDs and roles are not assignable. Writes personal audit with changed field names only, never the name value. No verified-email requirement for personal settings.
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 80, description: Trimmed display name }
+      responses:
+        '200':
+          description: Updated public personal identity; no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties: { user: { $ref: '#/components/schemas/User' } }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/OriginRejected' }
+        '429': { $ref: '#/components/responses/Throttled' }
     get:
       summary: Read the authenticated personal account
       security: [{ accessCookie: [] }]
@@ -249,6 +298,24 @@ paths:
         '404': { description: Organization absent or caller is not a member }
         '409': { description: Slug unavailable; stored settings unchanged }
         '429': { description: Organization request limit exceeded }
+  /organizations/{organizationId}/dashboard:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      summary: Real administrative metrics and five recent tenant activities
+      description: Verified OWNER/ADMIN only. Reauthorizes under the organization lock shared with tenant writes. Pending counts only PENDING and not-yet-expired records, not inviter eligibility. Recent activity excludes personal identity events and raw audit metadata. All counts are scoped to the authorized tenant.
+      security: [{ accessCookie: [] }]
+      responses:
+        '200':
+          description: Live dashboard projection; Cache-Control no-store and X-Request-Id
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Dashboard' }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Verification or OWNER/ADMIN management permission required }
+        '404': { description: Organization absent or caller is not a member; indistinguishable }
+        '429': { description: Management request limit exceeded (60/minute/endpoint/IP) }
   /organizations/{organizationId}/members:
     parameters:
       - $ref: '#/components/parameters/OrganizationId'
@@ -534,6 +601,34 @@ components:
         application/json:
           schema: { type: object }
   schemas:
+    Dashboard:
+      type: object
+      additionalProperties: false
+      required: [members, membersByRole, pendingInvitations, recentActivity]
+      properties:
+        members: { type: integer, minimum: 0 }
+        pendingInvitations: { type: integer, minimum: 0 }
+        membersByRole:
+          type: object
+          additionalProperties: false
+          required: [OWNER, ADMIN, MEMBER, VIEWER]
+          properties:
+            OWNER: { type: integer, minimum: 0 }
+            ADMIN: { type: integer, minimum: 0 }
+            MEMBER: { type: integer, minimum: 0 }
+            VIEWER: { type: integer, minimum: 0 }
+        recentActivity:
+          type: array
+          maxItems: 5
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, action, resource, createdAt]
+            properties:
+              id: { type: string, format: uuid }
+              action: { type: string }
+              resource: { type: string }
+              createdAt: { type: string, format: date-time }
     RoleInput:
       type: object
       additionalProperties: false
