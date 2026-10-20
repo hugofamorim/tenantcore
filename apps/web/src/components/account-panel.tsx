@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { authMutation, currentUser, renewSession, type PublicUser } from "@/lib/auth";
+import { authMutation, currentUser, renewSession, updateAccountName, type PublicUser } from "@/lib/auth";
 import { navigateAfterAuth } from "@/lib/auth-navigation";
 
 export function AccountPanel() {
   const router = useRouter();
+  const nameId = useId();
   const [user, setUser] = useState<PublicUser | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -34,6 +35,18 @@ export function AccountPanel() {
     } finally { setPending(false); }
   }
 
+  async function saveName(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); const data = new FormData(event.currentTarget);
+    setPending(true); setError(''); setNotice('');
+    try {
+      await updateAccountName(String(data.get('name') ?? ''));
+      const account = await currentUser();
+      if (!account) { navigateAfterAuth('/login'); return; }
+      setUser(account); setNotice('Your display name has been updated.');
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Please try again.'); }
+    finally { setPending(false); }
+  }
+
   return <div className="space-y-5" aria-busy={pending}>
     {!user && !error && <p role="status">Loading your account…</p>}
     {user && <>
@@ -42,6 +55,12 @@ export function AccountPanel() {
         <div><dt className="text-sm text-zinc-600 dark:text-zinc-400">Email address</dt><dd className="mt-1 break-words">{user.email}</dd></div>
         <div><dt className="text-sm text-zinc-600 dark:text-zinc-400">Email status</dt><dd className="mt-1">{user.emailVerifiedAt ? "Verified" : "Not verified"}</dd></div>
       </dl>
+      <form onSubmit={event => void saveName(event)} className="space-y-3 rounded-lg border border-zinc-300 p-4 dark:border-zinc-700">
+        <label htmlFor={nameId} className="block text-sm font-medium">Display name</label>
+        <input key={user.name} id={nameId} name="name" defaultValue={user.name} autoComplete="name" required minLength={2} maxLength={80} disabled={pending} className="w-full rounded-lg border border-zinc-400 bg-transparent px-3 py-2" />
+        <button disabled={pending} className="rounded-lg bg-blue-700 px-4 py-2 text-white disabled:opacity-60">Save display name</button>
+      </form>
+      <Link href="/forgot-password" className="inline-block text-sm underline">Reset your password</Link>
       <div className="flex flex-wrap gap-3">
         <Link href="/organizations" className="rounded-lg border border-zinc-400 px-4 py-2">Your organizations</Link>
         {!user.emailVerifiedAt && <button className="rounded-lg border border-zinc-400 px-4 py-2 disabled:opacity-60" disabled={pending} onClick={() => void action("resend-verification")}>Send verification email</button>}

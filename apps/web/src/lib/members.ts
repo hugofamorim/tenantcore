@@ -87,7 +87,10 @@ export async function membershipRequest(
                 ? "This invitation is invalid, expired or belongs to another email address. Otherwise, check the form values."
                 : response.status === 429
                   ? "Too many requests. Please wait a minute and try again."
-                  : response.status === 503
+                  : response.status === 503 &&
+                      method === "POST" &&
+                      path.includes("/invitations") &&
+                      path !== "/invitations/accept"
                     ? "Invitation email could not be delivered. Please create a new invitation."
                     : "Organization management is temporarily unavailable. Please try again.",
     );

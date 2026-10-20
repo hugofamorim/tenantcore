@@ -1,75 +1,96 @@
-import Image from "next/image";
 import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <nav aria-label="Account" className="mb-8 flex flex-wrap gap-5 text-sm font-medium">
-          <Link href="/login" className="underline underline-offset-4">Sign in</Link>
-          <Link href="/register" className="underline underline-offset-4">Create account</Link>
-          <Link href="/status" className="underline underline-offset-4">Service status</Link>
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8 sm:px-10">
+      <header className="flex flex-wrap items-center justify-between gap-5 border-b border-zinc-200 pb-6 dark:border-zinc-800">
+        <Link
+          href="/"
+          className="text-xl font-semibold tracking-tight text-blue-700 dark:text-blue-300"
+        >
+          TenantCore
+        </Link>
+        <nav
+          aria-label="Account"
+          className="flex flex-wrap gap-5 text-sm font-medium"
+        >
+          <Link href="/login" className="underline underline-offset-4">
+            Sign in
+          </Link>
+          <Link href="/register" className="underline underline-offset-4">
+            Create account
+          </Link>
+          <Link href="/status" className="underline underline-offset-4">
+            Service status
+          </Link>
         </nav>
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </header>
+      <section className="max-w-3xl py-16 sm:py-24">
+        <p className="text-sm font-medium uppercase tracking-widest text-blue-700 dark:text-blue-300">
+          Open-source multi-tenant workspaces
+        </p>
+        <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-6xl">
+          Your organizations.
+          <br />
+          Clear boundaries.
+        </h1>
+        <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-600 dark:text-zinc-400">
+          Create a workspace, invite your team and manage access with
+          organization-specific roles. Follow real membership activity in an
+          administrative dashboard.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-4">
+          <Link
+            href="/register"
+            className="rounded-lg bg-blue-700 px-5 py-3 font-medium text-white"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Create your account
+          </Link>
+          <Link
+            href="/organizations"
+            className="rounded-lg border border-zinc-400 px-5 py-3 font-medium"
           >
-            Documentation
-          </a>
+            Open your workspaces
+          </Link>
         </div>
-      </main>
-    </div>
+      </section>
+      <section
+        aria-label="Workspace capabilities"
+        className="grid gap-5 pb-12 md:grid-cols-3"
+      >
+        {[
+          [
+            "Verified identity",
+            "Email verification, password recovery and rotating sessions keep account access explicit.",
+          ],
+          [
+            "Roles per organization",
+            "Owners, administrators, members and viewers have permissions checked by the API on each action.",
+          ],
+          [
+            "Visible activity",
+            "Track membership and invitation changes with real tenant metrics and a scoped audit log.",
+          ],
+        ].map(([title, description]) => (
+          <article
+            key={title}
+            className="rounded-xl border border-zinc-200 p-6 dark:border-zinc-700"
+          >
+            <h2 className="text-lg font-semibold">{title}</h2>
+            <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+              {description}
+            </p>
+          </article>
+        ))}
+      </section>
+      <footer className="mt-auto border-t border-zinc-200 pt-6 text-sm text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+        <a
+          href="https://github.com/hugofamorim/tenantcore"
+          className="underline underline-offset-4"
+        >
+          Source, architecture and local demonstration instructions
+        </a>
+      </footer>
+    </main>
   );
 }

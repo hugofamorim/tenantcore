@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test --project=identity-and-organizations && playwright test --project=collaboration"
+    "test:e2e": "playwright test --project=identity-and-organizations && playwright test --project=collaboration && playwright test --project=operations"
   },
   "dependencies": {
     "next": "16.4.2",
