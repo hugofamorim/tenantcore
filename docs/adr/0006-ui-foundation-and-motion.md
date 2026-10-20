@@ -19,7 +19,8 @@ Organization navigation, loading states and cards repeat presentation classes.
   generated components as code and record the CLI version used in the UI guide.
 - Define semantic CSS variables for surfaces, text, borders, accent and focus.
   Use Geist consistently. Use next-themes' class strategy with light/dark/system
-  choices; defer the theme control until mounted to avoid hydration disagreement.
+  choices; keep initial control markup independent of browser preferences and
+  render the current choice in the interactive menu to avoid hydration disagreement.
   The root stays a Server Component; the documented html-only hydration warning
   exception is limited to next-themes' pre-hydration theme attribute mutation.
 - Extract a presentational workspace shell from OrganizationsPanel. Keep current
