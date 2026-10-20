@@ -44,6 +44,20 @@ export class MailService {
     });
   }
 
+  async sendInvitation(to: string, token: string) {
+    const url = new URL(
+      '/invitations/accept',
+      this.config.getOrThrow<string>('WEB_ORIGIN'),
+    );
+    url.hash = new URLSearchParams({ token }).toString();
+    await this.transport.sendMail({
+      from: this.config.getOrThrow<string>('SMTP_FROM'),
+      to,
+      subject: 'Your TenantCore organization invitation',
+      text: `You have been invited to a TenantCore organization. Sign in with this email address (or register and verify it), then reopen this link to review and accept:\n\n${url.toString()}\n\nThis invitation expires in 24 hours and can be used only once. If you did not expect this invitation, you can ignore it.`,
+    });
+  }
+
   close() {
     this.transport.close();
   }

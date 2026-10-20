@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { audit } from '../audit/audit';
 import { OrganizationRole, Prisma } from '../generated/prisma/client';
 import {
   CreateOrganizationDto,
@@ -50,6 +51,14 @@ export class OrganizationsService {
             role: OrganizationRole.OWNER,
           },
         });
+        await audit(
+          tx,
+          userId,
+          created.id,
+          'organization.created',
+          'organization',
+          created.id,
+        );
         return created;
       });
       return { ...organization, role: OrganizationRole.OWNER };
@@ -69,12 +78,10 @@ export class OrganizationsService {
       select: { role: true, organization: { select: organizationSelect } },
     });
     return {
-      items: memberships
-        .slice(0, page.limit)
-        .map((membership) => ({
-          ...membership.organization,
-          role: membership.role,
-        })),
+      items: memberships.slice(0, page.limit).map((membership) => ({
+        ...membership.organization,
+        role: membership.role,
+      })),
       limit: page.limit,
       offset: page.offset,
       hasMore: memberships.length > page.limit,
@@ -113,6 +120,19 @@ export class OrganizationsService {
           data: input,
           select: organizationSelect,
         });
+        await audit(
+          tx,
+          userId,
+          organizationId,
+          'organization.updated',
+          'organization',
+          organizationId,
+          {
+            fields: Object.keys(input).filter(
+              (key) => input[key as keyof UpdateOrganizationDto] !== undefined,
+            ),
+          },
+        );
         return { ...organization, role: membership.role };
       });
     } catch (error) {
