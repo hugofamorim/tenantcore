@@ -69,9 +69,8 @@ describe('Email identity actions: HTTP, PostgreSQL and real SMTP', () => {
     });
     expect(stored.tokenHash === verification).toBe(false);
     expect(stored.purpose).toBe(EmailActionPurpose.VERIFY_EMAIL);
-    expect(
-      stored.expiresAt.getTime() - stored.createdAt.getTime(),
-    ).toBeLessThanOrEqual(30 * 60_000);
+    expect(stored.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(stored.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 30 * 60_000);
     const response = await post('verify-email', { token: verification }).expect(
       204,
     );
@@ -179,9 +178,8 @@ describe('Email identity actions: HTTP, PostgreSQL and real SMTP', () => {
     const stored = await prisma.emailAction.findUniqueOrThrow({
       where: { tokenHash: tokenHash(secret) },
     });
-    expect(
-      stored.expiresAt.getTime() - stored.createdAt.getTime(),
-    ).toBeLessThanOrEqual(15 * 60_000);
+    expect(stored.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(stored.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 15 * 60_000);
     await post('reset-password', { token: secret, password: 'short' }).expect(
       400,
     );
