@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: TenantCore API
-  version: 0.3.0
-  description: Personal identity, rotating sessions, email verification/recovery and organization-scoped settings/RBAC.
+  version: 0.4.0
+  description: Personal identity, rotating sessions, email verification/recovery, organizations, invitations, membership hierarchy, ownership and tenant audit. All management reads require OWNER/ADMIN and verified identity. All mutations require exact Origin and application/json, including DELETE with an empty JSON object. Management limits are 60/minute/endpoint/IP, except sending/reissuing and acceptance at 10/minute. Tenant responses are no-store.
 servers:
   - url: http://localhost:3001
 paths:
@@ -249,6 +249,241 @@ paths:
         '404': { description: Organization absent or caller is not a member }
         '409': { description: Slug unavailable; stored settings unchanged }
         '429': { description: Organization request limit exceeded }
+  /organizations/{organizationId}/members:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      summary: List members as OWNER/ADMIN
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - { in: query, name: search, schema: { type: string, maxLength: 80 }, description: Case-insensitive name/email substring in this tenant only }
+      responses:
+        '200':
+          description: Memberships ordered by createdAt/id ascending; no global counts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ManagementPage'
+                  - properties: { items: { type: array, items: { $ref: '#/components/schemas/Member' } } }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Verification required or management role insufficient }
+        '404': { description: Organization absent or caller is not a member }
+        '429': { description: Management request limit exceeded }
+  /organizations/{organizationId}/members/{membershipId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - { in: path, name: membershipId, required: true, schema: { type: string, format: uuid } }
+    patch:
+      summary: Change another member's non-owner role
+      description: OWNER manages ADMIN/MEMBER/VIEWER. ADMIN can change only MEMBER/VIEWER to MEMBER/VIEWER. Self and OWNER changes are forbidden.
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoleInput' }
+      responses:
+        '200':
+          description: Updated member; role is immediately effective; audited in the same transaction
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [member]
+                properties: { member: { $ref: '#/components/schemas/Member' } }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Origin, verification, self or role policy rejected }
+        '404': { description: Organization or member absent in caller's authorized scope }
+        '429': { description: Management request limit exceeded }
+    delete:
+      summary: Remove another non-owner member
+      description: Same target hierarchy as role changes. The current owner cannot be removed; transfer first. Removed membership loses tenant access on the next request.
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody: { $ref: '#/components/requestBodies/EmptyJson' }
+      responses:
+        '204': { description: Membership removed and audited }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Origin, verification, self or role policy rejected }
+        '404': { description: Organization or member absent in caller's authorized scope }
+        '429': { description: Management request limit exceeded }
+  /organizations/{organizationId}/ownership-transfer:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    post:
+      summary: Atomically transfer sole ownership to an existing verified member
+      description: OWNER only. Previous owner becomes ADMIN. Ordinary invitation/role endpoints never assign OWNER. Concurrent transfer/removal uses the same organization lock. Legacy zero/multiple owners require review instead of automatic repair.
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [membershipId]
+              properties: { membershipId: { type: string, format: uuid } }
+      responses:
+        '200': { description: Ownership transferred and audited atomically; message returned }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Origin, verification or OWNER role required }
+        '404': { description: Organization or target absent in authorized scope }
+        '409': { description: Same owner, unverified target or ambiguous legacy ownership }
+        '429': { description: Management request limit exceeded }
+  /organizations/{organizationId}/invitations:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      summary: List invitations as OWNER/ADMIN
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Ordered createdAt/id descending; expired pending records are projected as EXPIRED; secrets never returned
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ManagementPage'
+                  - properties: { items: { type: array, items: { $ref: '#/components/schemas/Invitation' } } }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Verification required or management role insufficient }
+        '404': { description: Organization absent or caller is not a member }
+        '429': { description: Management request limit exceeded }
+    post:
+      summary: Invite an email to an allowed non-owner role
+      description: Email normalized; OWNER can invite ADMIN/MEMBER/VIEWER and ADMIN only MEMBER/VIEWER. Token hash stored with 24-hour expiry. One pending invitation per tenant/email. Account need not exist. Await SMTP outside transaction; failure revokes this token generation. No membership is created yet.
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, role]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+                role: { type: string, enum: [ADMIN, MEMBER, VIEWER] }
+      responses:
+        '201': { $ref: '#/components/responses/InvitationResult' }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Origin, verification or role policy rejected }
+        '404': { description: Organization absent or caller is not a member }
+        '409': { description: Existing membership or pending invitation }
+        '429': { description: Invitation sending limit exceeded }
+        '503': { description: SMTP delivery failed; create a new invitation }
+  /organizations/{organizationId}/invitations/{invitationId}/reissue:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - { in: path, name: invitationId, required: true, schema: { type: string, format: uuid } }
+    post:
+      summary: Rotate a pending or expired invitation with the same role/email
+      description: Rechecks current actor permission and recipient membership. Replaces secret/expiry/inviter and invalidates the previous link. Accepted/revoked invitations require a new invitation.
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody: { $ref: '#/components/requestBodies/EmptyJson' }
+      responses:
+        '200': { $ref: '#/components/responses/InvitationResult' }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Origin, verification or role policy rejected }
+        '404': { description: Organization or invitation absent in authorized scope }
+        '409': { description: Accepted/revoked invitation or existing membership }
+        '429': { description: Invitation reissue limit exceeded }
+        '503': { description: SMTP delivery failed; create a new invitation }
+  /organizations/{organizationId}/invitations/{invitationId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+      - { in: path, name: invitationId, required: true, schema: { type: string, format: uuid } }
+    delete:
+      summary: Revoke a non-accepted invitation as an authorized manager
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody: { $ref: '#/components/requestBodies/EmptyJson' }
+      responses:
+        '204': { description: Revoked; repeating revocation is idempotent }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Origin, verification or role policy rejected }
+        '404': { description: Organization or invitation absent in authorized scope }
+        '409': { description: Invitation already accepted; manage the membership instead }
+        '429': { description: Management request limit exceeded }
+  /invitations/accept:
+    post:
+      summary: Accept a single-use invitation with its matching verified email
+      description: Tenant/role come exclusively from the hashed token's record. Inviter's current role is rechecked under the organization lock. Existing memberships are never elevated. New accounts register/verify normally, then reopen the email fragment link. GET never accepts an invitation.
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/EmailToken'
+              additionalProperties: false
+              properties:
+                token: { type: string, pattern: '^[A-Za-z0-9_-]{43}$', writeOnly: true }
+      responses:
+        '200':
+          description: Membership, consumed invitation and audit committed together
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [organizationId]
+                properties: { organizationId: { type: string, format: uuid } }
+        '400': { description: Invalid, expired, consumed, revoked, replaced, wrong-email or no-longer-authorized invitation; generic response }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Origin rejected or recipient email unverified }
+        '409': { description: Existing membership cannot be changed by invitation }
+        '429': { description: Acceptance limit exceeded }
+  /organizations/{organizationId}/audit-logs:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      summary: Read tenant audit as OWNER/ADMIN
+      description: Ordered createdAt/id descending; selected non-secret metadata only. Personal login/logout events are not exposed by this route. No global audit endpoint.
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Tenant-scoped audit records
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ManagementPage'
+                  - properties: { items: { type: array, items: { $ref: '#/components/schemas/AuditEvent' } } }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Verification required or management role insufficient }
+        '404': { description: Organization absent or caller is not a member }
+        '429': { description: Management request limit exceeded }
 components:
   securitySchemes:
     accessCookie:
@@ -262,6 +497,20 @@ components:
       name: tc_refresh
       description: __Host-tc_refresh in HTTPS production; HttpOnly, SameSite=Lax, seven-day absolute lifetime.
   parameters:
+    OrganizationId:
+      in: path
+      name: organizationId
+      required: true
+      schema: { type: string, format: uuid }
+      description: UUIDv4 validated against current caller membership; not a trusted tenant claim
+    Limit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Offset:
+      in: query
+      name: offset
+      schema: { type: integer, minimum: 0, maximum: 10000, default: 0 }
     Origin:
       in: header
       name: Origin
@@ -285,6 +534,61 @@ components:
         application/json:
           schema: { type: object }
   schemas:
+    RoleInput:
+      type: object
+      additionalProperties: false
+      required: [role]
+      properties:
+        role: { type: string, enum: [ADMIN, MEMBER, VIEWER] }
+    ManagementPage:
+      type: object
+      required: [items, limit, offset, hasMore]
+      properties:
+        items: { type: array, items: {} }
+        limit: { type: integer }
+        offset: { type: integer }
+        hasMore: { type: boolean }
+    Member:
+      type: object
+      additionalProperties: false
+      required: [id, role, createdAt, user]
+      properties:
+        id: { type: string, format: uuid }
+        role: { type: string, enum: [OWNER, ADMIN, MEMBER, VIEWER] }
+        createdAt: { type: string, format: date-time }
+        user:
+          type: object
+          additionalProperties: false
+          required: [id, name, email]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            email: { type: string, format: email }
+    Invitation:
+      type: object
+      additionalProperties: false
+      required: [id, email, role, status, expiresAt, createdAt, updatedAt, acceptedAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { type: string, enum: [ADMIN, MEMBER, VIEWER] }
+        status: { type: string, enum: [PENDING, ACCEPTED, REVOKED, EXPIRED] }
+        expiresAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        acceptedAt: { type: [string, 'null'], format: date-time }
+    AuditEvent:
+      type: object
+      additionalProperties: false
+      required: [id, actorId, action, resource, resourceId, metadata, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        actorId: { type: [string, 'null'], format: uuid }
+        action: { type: string }
+        resource: { type: string }
+        resourceId: { type: string }
+        metadata: { type: object, additionalProperties: true, description: Explicit non-secret metadata such as role transitions or changed field names }
+        createdAt: { type: string, format: date-time }
     OrganizationInput:
       type: object
       additionalProperties: false
@@ -338,6 +642,15 @@ components:
             - { type: array, items: { type: string } }
         error: { type: string }
   responses:
+    InvitationResult:
+      description: Public invitation projection after SMTP acknowledgement; no token/hash returned; Cache-Control no-store
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [invitation]
+            properties:
+              invitation: { $ref: '#/components/schemas/Invitation' }
     OrganizationResult:
       description: Public organization projection with the caller's role; Cache-Control no-store
       content:

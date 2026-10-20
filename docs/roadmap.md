@@ -80,8 +80,37 @@ desktop/mobile rendering and outsider denial. The new forms use unique IDs so
 Next.js retained hidden pages cannot attach labels to another form. The PR records
 the final published SHA and Linux CI result. No production deployment is claimed.
 
+## M3 — Invitations, members and audit (implemented; TC-010 acceptance pending)
+
+TC-010 starts from merged M2/main `8e66061`. The initial baseline passed lint,
+typecheck, 14 API/19 web unit tests, 45 HTTP/PostgreSQL tests and both builds.
+ADR 0004 defines hierarchy, invitation lifecycle, ownership and audit boundaries.
+
+- Implemented: email invitation before/after account creation, verified matching
+  recipient acceptance, one-use hash/expiry, duplicate protection, reissue/revoke.
+- Implemented: scoped member search/list, role changes/removal with hierarchy,
+  sole-owner atomic transfer and safe rejection of ambiguous legacy ownership.
+- Implemented: tenant audit with transactional mutation events and personal
+  login/logout events excluded from tenant reads; no raw secrets in metadata.
+- Implemented: member/invitation/audit UI, role badges, confirmation dialogs,
+  new-account instructions and fragment-only explicit acceptance.
+- Migration: additive Invitation/AuditEvent tables, pending-recipient partial
+  uniqueness and invitation non-OWNER SQL check; existing rows remain intact.
+- Validation targets: authorization/expiry/reuse, concurrent acceptance and
+  ownership/removal, audit-failure rollback, real SMTP and two-account browser flow.
+
+Final local acceptance: 30 API unit tests, 29 web unit/component tests, 66
+HTTP/PostgreSQL tests and four Chromium journeys passed (129 total). Lint has no
+warnings, typecheck (also without `.next`), both production builds, Prisma
+validation and schema/database diff passed. The migration was applied to the
+isolated test database and the existing local development database. Browser
+projects use fresh servers between identity/organizations and collaboration to
+preserve real rate limits without cross-suite quota interference. The TC-010 PR
+records the published SHA and final Linux CI result.
+No durable mail outbox, audit retention/external sink, organization deletion,
+public demo or production deployment is claimed.
+
 ## Later milestones (planned)
 
-- M3: invitations, membership lifecycle, ownership and audit records.
 - M4: real dashboard, accessibility, deploy/demo and operational hardening.
 - M5: optional post-MVP extensions only after M1–M4 acceptance.

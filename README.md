@@ -2,7 +2,7 @@
 
 An open-source SaaS reference built with Next.js, NestJS, PostgreSQL, Prisma and
 TypeScript. The goal is a well-tested multi-organization product; the current
-release implements the technical foundation and personal identity/authentication.
+release implements personal identity, organizations, invitations and membership management.
 
 ## What works today
 
@@ -11,12 +11,13 @@ release implements the technical foundation and personal identity/authentication
 - Account registration, login, authenticated account page, rotating sessions and logout.
 - Email verification, one-use password recovery and revocation of all sessions on reset.
 - Organization creation, membership-scoped list/details, per-tab switching and OWNER/ADMIN settings edits.
+- Email invitations, member role/removal policies, atomic ownership transfer and tenant audit.
 - Argon2id passwords, hashed tokens, protected cookies, origin checks and request limits.
 - API unit/HTTP/database tests, React component tests and a real Chromium journey.
 
-Invitation/member lifecycle, ownership transfer, auditing and dashboard metrics
-are **planned**, not completed. Organization authorization is implemented for
-the existing organization routes. Read the [roadmap](docs/roadmap.md).
+Dashboard metrics and production demonstration/deployment are **planned**.
+Organization authorization applies to every implemented tenant route.
+Read the [roadmap](docs/roadmap.md).
 Existing domain tables are not equivalent to implemented tenant features.
 
 ## Run locally
@@ -82,14 +83,45 @@ of the authenticated caller. The UI can load more pages into its selector.
 Every organization API request requires an authenticated, email-verified user.
 The server rechecks membership and organization-relative role. A foreign or
 missing organization returns the same 404; a member with insufficient role gets
-403. Supplying a role or user/tenant ID in a mutation body is rejected; a forged
-tenant header grants no access. No member-change or organization-delete endpoint
-is exposed yet; those workflows and ownership transfer remain M3.
+403. Settings reject user/tenant/role fields; a forged tenant header grants no
+access. Management endpoints accept only their documented role or target fields.
+Organization deletion is not exposed.
 
 ![Organization overview captured from the real browser journey](docs/screenshots/organizations.png)
 
 The same journey checks mobile layout and independent organization context in
 separate tabs; [mobile capture](docs/screenshots/organizations-mobile.png).
+
+## Invitations, members and audit
+
+OWNER/ADMIN see Members, Invitations and Audit log in the workspace sidebar.
+Invite a fictional email with an allowed role, then open the invitation in Mailpit.
+The recipient may create an account after receiving the invitation: register,
+verify that same email, sign in, and reopen the invitation link to explicitly
+accept. The link is not a login credential. It expires in 24 hours, is single-use,
+and cannot select another tenant, recipient or role. No membership is created
+until acceptance. An existing member cannot use an invitation to elevate a role.
+
+OWNER can invite/manage ADMIN, MEMBER and VIEWER. ADMIN can invite/manage only
+MEMBER/VIEWER; neither can edit/remove their own membership or mutate the OWNER
+through ordinary member actions. Members and viewers cannot list personal member
+emails, manage invitations or read audit logs. The member table supports name/email
+search, bounded pagination, role badges and confirmation before sensitive changes.
+Revocation invalidates an invitation; reissue replaces its previous link. Removing
+or demoting an inviter also rechecks their permission when a recipient accepts.
+
+Only OWNER can transfer ownership to an existing verified member. Transfer demotes
+the old owner to ADMIN and promotes the target atomically, preserving one owner.
+Legacy organizations with ambiguous owner counts require manual review; migrations
+do not rewrite them. A removed member loses tenant access on the next request.
+Tenant audit includes organization creation/settings, invitation lifecycle, member
+changes and ownership transfer. Login/logout events are personal and not exposed
+through tenant audit. No password, token, hash or raw request is audit metadata.
+
+![Member management captured from the real two-account browser journey](docs/screenshots/members.png)
+
+[Mobile member table](docs/screenshots/members-mobile.png) scrolls inside its
+container while keeping navigation and page content within the viewport.
 
 ## Quality checks
 
@@ -139,6 +171,12 @@ Browser tests start their own API on 3301 and web dev server on 3300, with no
 mock backend; keep those ports free. They use fictional accounts in the test
 database. Test Mailpit uses SMTP 11025 and inbox 18025; tests pick those defaults
 (CI explicitly uses 1025/8025). `SMTP_PORT` and `MAILPIT_URL` can override them.
+`test:e2e` runs the identity/organization project, stops its servers, then starts
+fresh servers for the collaboration project. This prevents independent fictional
+accounts on the same loopback IP exhausting one another's real rate-limit budget;
+no API limits are disabled or increased. For one journey, use
+`pnpm --filter web exec playwright test --project=collaboration` (or
+`--project=identity-and-organizations`). Both groups run in CI.
 The CI runs all these gates on Linux with PostgreSQL and SMTP. Unit tests need
 no running database. Unset test env variables before returning to development.
 
@@ -149,6 +187,7 @@ no running database. Unset test env variables before returning to development.
 - [Authentication/session ADR](docs/adr/0001-authentication-and-sessions.md)
 - [Email verification/recovery ADR](docs/adr/0002-email-verification-and-recovery.md)
 - [Organization and tenant authorization ADR](docs/adr/0003-organizations-and-tenant-authorization.md)
+- [Invitation, membership and audit ADR](docs/adr/0004-invitations-membership-and-audit.md)
 - [OpenAPI contract](docs/api/openapi.yaml)
 - [Roadmap and verified baseline](docs/roadmap.md)
 
@@ -168,6 +207,15 @@ The 32-job/two-worker in-process mail queue is non-durable: resend after failure
 or restart. A durable encrypted outbox and retention cleanup remain operational
 hardening work. No tokens or raw SMTP errors are logged. Local Mailpit does not
 relay messages externally.
+
+Invitation sending/reissue awaits SMTP outside database transactions. Failure
+returns 503 and revokes only that token generation; create a new invitation. A
+crash or ambiguous delivery acknowledgement can require reissue. This flow does
+not claim a durable mail outbox. The additive M3 migration introduces Invitation
+and AuditEvent, a partial unique index for pending tenant/email invitations and a
+check rejecting invitation OWNER roles. Keep these SQL constraints in future
+migrations; Prisma's schema file alone does not describe them. Rollback retains
+the added tables rather than discarding invitations/audit history.
 
 The identity migration is additive: existing users and memberships remain;
 legacy users have no fabricated credentials or verification. Roll back an app
