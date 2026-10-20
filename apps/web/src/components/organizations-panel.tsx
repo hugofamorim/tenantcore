@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authMutation, currentUser, type PublicUser } from "@/lib/auth";
@@ -14,10 +15,14 @@ import {
 } from "@/lib/organizations";
 import { OrganizationForm } from "./organization-form";
 import { MembershipPanel, type ManagementSection } from "./membership-panel";
-import { DashboardPanel } from "./dashboard-panel";
 import { Badge } from "@/components/ui/badge";
 import { WorkspaceShell } from "./workspace-shell";
 import { AccessProblem } from "./access-problem";
+
+const DashboardPanel = dynamic(
+  () => import("./dashboard-panel").then((module) => module.DashboardPanel),
+  { loading: () => <p role="status">Loading dashboard…</p> },
+);
 
 export function OrganizationsPanel({
   organizationId,
