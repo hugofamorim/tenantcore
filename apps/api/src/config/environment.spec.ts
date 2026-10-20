@@ -64,4 +64,14 @@ describe('environment validation', () => {
       }),
     ).toThrow('exact origin');
   });
+
+  it('binds to loopback by default and requires an explicit supported network address', () => {
+    expect(validateEnvironment(database).API_HOST).toBe('127.0.0.1');
+    expect(
+      validateEnvironment({ ...database, API_HOST: '0.0.0.0' }).API_HOST,
+    ).toBe('0.0.0.0');
+    expect(() =>
+      validateEnvironment({ ...database, API_HOST: 'untrusted.example.test' }),
+    ).toThrow('API_HOST');
+  });
 });

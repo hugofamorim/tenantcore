@@ -34,6 +34,12 @@ import { OrganizationPageDto, OrganizationParams } from './organizations.dto';
 export class MembersController {
   constructor(private readonly members: MembersService) {}
 
+  @Get('dashboard')
+  @Header('Cache-Control', 'no-store')
+  dashboard(@CurrentUser() user: PublicUser, @Param() p: OrganizationParams) {
+    return this.members.dashboard(user.id, p.organizationId);
+  }
+
   @Get('members')
   @Header('Cache-Control', 'no-store')
   list(

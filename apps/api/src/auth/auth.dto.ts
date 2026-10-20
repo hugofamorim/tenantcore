@@ -38,6 +38,16 @@ export class ResetPasswordDto extends EmailTokenDto {
   password!: string;
 }
 
+export class AccountNameDto {
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(2)
+  @MaxLength(80)
+  name!: string;
+}
+
 export class RegisterDto extends LoginDto {
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,

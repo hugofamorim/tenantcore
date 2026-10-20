@@ -33,6 +33,10 @@ export function validateEnvironment(input: Record<string, unknown>) {
     throw new Error('PORT must be an integer between 1 and 65535');
   }
   const production = nodeEnv === 'production';
+  const apiHost =
+    typeof input.API_HOST === 'string' ? input.API_HOST : '127.0.0.1';
+  if (!['127.0.0.1', '0.0.0.0', '::1', '::'].includes(apiHost))
+    throw new Error('API_HOST must be a supported bind address');
   const smtpHost =
     typeof input.SMTP_HOST === 'string'
       ? input.SMTP_HOST.trim()
@@ -69,6 +73,7 @@ export function validateEnvironment(input: Record<string, unknown>) {
     DATABASE_URL: databaseUrl,
     WEB_ORIGIN: webOrigin,
     PORT: port,
+    API_HOST: apiHost,
     SMTP_HOST: smtpHost,
     SMTP_FROM: smtpFrom,
     SMTP_PORT: smtpPort,

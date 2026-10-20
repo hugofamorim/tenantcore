@@ -128,6 +128,21 @@ export class AuthService implements OnModuleInit {
     return session.user;
   }
 
+  async updateName(userId: string, name: string) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+      const user = await tx.user.update({
+        where: { id: userId },
+        data: { name },
+        select: publicUserSelect,
+      });
+      await audit(tx, userId, null, 'account.name_updated', 'user', userId, {
+        fields: ['name'],
+      });
+      return { user };
+    });
+  }
+
   async refresh(token: string | undefined) {
     if (!validToken(token)) throw new UnauthorizedException('Session expired');
     const tokens = newTokens();

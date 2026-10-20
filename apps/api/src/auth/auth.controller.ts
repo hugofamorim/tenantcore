@@ -5,6 +5,7 @@ import {
   Header,
   HttpCode,
   Post,
+  Patch,
   Req,
   Res,
   UseGuards,
@@ -23,6 +24,7 @@ import {
   EmailTokenDto,
   LoginDto,
   RegisterDto,
+  AccountNameDto,
   ResetPasswordDto,
 } from './auth.dto';
 import { EmailActionsService } from './email-actions.service';
@@ -90,6 +92,14 @@ export class AuthController {
   @Header('Cache-Control', 'no-store')
   me(@Req() req: AuthenticatedRequest) {
     return { user: req.user };
+  }
+
+  @Patch('me')
+  @UseGuards(SessionGuard)
+  @Header('Cache-Control', 'no-store')
+  updateName(@Req() req: AuthenticatedRequest, @Body() input: AccountNameDto) {
+    if (!req.user) throw new Error('Session guard did not provide identity');
+    return this.auth.updateName(req.user.id, input.name);
   }
 
   @Post('resend-verification')

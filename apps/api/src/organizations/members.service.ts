@@ -128,6 +128,41 @@ export class MembersService {
     });
   }
 
+  async dashboard(userId: string, organizationId: string) {
+    return this.locked(userId, organizationId, async (tx) => {
+      const grouped = await tx.membership.groupBy({
+        by: ['role'],
+        where: { organizationId },
+        _count: { _all: true },
+      });
+      const membersByRole = { OWNER: 0, ADMIN: 0, MEMBER: 0, VIEWER: 0 };
+      for (const group of grouped)
+        membersByRole[group.role] = group._count._all;
+      const pendingInvitations = await tx.invitation.count({
+        where: {
+          organizationId,
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+      });
+      const recentActivity = await tx.auditEvent.findMany({
+        where: { organizationId },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 5,
+        select: { id: true, action: true, resource: true, createdAt: true },
+      });
+      return {
+        members: Object.values(membersByRole).reduce(
+          (total, count) => total + count,
+          0,
+        ),
+        membersByRole,
+        pendingInvitations,
+        recentActivity,
+      };
+    });
+  }
+
   async changeRole(
     userId: string,
     organizationId: string,
