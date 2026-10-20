@@ -22,8 +22,36 @@ describe('environment validation', () => {
         ...database,
         NODE_ENV: 'production',
         WEB_ORIGIN: 'https://example.com',
+        SMTP_HOST: 'smtp.example.com',
+        SMTP_FROM: 'noreply@example.com',
       }).PORT,
     ).toBe(3001);
+  });
+
+  it('requires explicit encrypted production SMTP and rejects malformed settings', () => {
+    const production = {
+      ...database,
+      NODE_ENV: 'production',
+      WEB_ORIGIN: 'https://example.com',
+    };
+    expect(() => validateEnvironment(production)).toThrow('SMTP_HOST');
+    expect(() =>
+      validateEnvironment({
+        ...production,
+        SMTP_HOST: 'smtp.example.com',
+        SMTP_FROM: 'noreply@example.com',
+        SMTP_REQUIRE_TLS: 'false',
+      }),
+    ).toThrow('requires TLS');
+    expect(() =>
+      validateEnvironment({ ...database, SMTP_SECURE: 'yes' }),
+    ).toThrow('true or false');
+    expect(() => validateEnvironment({ ...database, SMTP_PORT: 0 })).toThrow(
+      'SMTP_PORT',
+    );
+    expect(() =>
+      validateEnvironment({ ...database, SMTP_USER: 'user' }),
+    ).toThrow('configured together');
   });
 
   it('rejects invalid URLs, origins and ports', () => {

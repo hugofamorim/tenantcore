@@ -26,6 +26,26 @@ model User {
   memberships        Membership[]
   passwordCredential PasswordCredential?
   sessions           AuthSession[]
+  emailActions       EmailAction[]
+}
+
+enum EmailActionPurpose {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+model EmailAction {
+  id         String             @id @default(uuid())
+  userId     String
+  purpose    EmailActionPurpose
+  tokenHash  String             @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime           @default(now())
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, createdAt])
+  @@index([expiresAt])
 }
 
 model PasswordCredential {

@@ -5,6 +5,8 @@ import { AuthService } from './auth.service';
 import { PasswordService } from './password.service';
 import { AuthCookies } from './auth.cookies';
 import { AuthOriginGuard, SessionGuard } from './auth.guards';
+import { MailService } from './mail.service';
+import { EmailActionsService } from './email-actions.service';
 
 @Module({
   imports: [ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }])],
@@ -15,6 +17,8 @@ import { AuthOriginGuard, SessionGuard } from './auth.guards';
     AuthCookies,
     AuthOriginGuard,
     SessionGuard,
+    MailService,
+    EmailActionsService,
   ],
 })
 export class AuthModule {}

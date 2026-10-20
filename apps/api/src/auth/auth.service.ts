@@ -3,11 +3,14 @@ import {
   OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '../generated/prisma/client';
+import { EmailActionPurpose, Prisma } from '../generated/prisma/client';
 import { PasswordService } from './password.service';
 import { LoginDto, RegisterDto } from './auth.dto';
+import { EmailActionsService } from './email-actions.service';
+import { isSecret as validToken, newSecret, tokenHash } from './auth.tokens';
+export { tokenHash } from './auth.tokens';
 
 export const ACCESS_LIFETIME_MS = 15 * 60 * 1000;
 export const REFRESH_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
@@ -21,19 +24,11 @@ export type PublicUser = Prisma.UserGetPayload<{
   select: typeof publicUserSelect;
 }>;
 
-export function tokenHash(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
-
 function newTokens() {
   return {
-    access: randomBytes(32).toString('base64url'),
-    refresh: randomBytes(32).toString('base64url'),
+    access: newSecret(),
+    refresh: newSecret(),
   };
-}
-
-function validToken(token: string | undefined): token is string {
-  return typeof token === 'string' && /^[A-Za-z0-9_-]{43}$/.test(token);
 }
 
 @Injectable()
@@ -43,6 +38,7 @@ export class AuthService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
+    private readonly emailActions: EmailActionsService,
   ) {}
 
   async onModuleInit() {
@@ -68,6 +64,7 @@ export class AuthService implements OnModuleInit {
       ))
         throw error;
     }
+    this.emailActions.request(input.email, EmailActionPurpose.VERIFY_EMAIL);
     return {
       message:
         'If this email is available, your account has been created. You can now sign in.',
@@ -75,32 +72,40 @@ export class AuthService implements OnModuleInit {
   }
 
   async login(input: LoginDto) {
-    const user = await this.prisma.user.findUnique({
+    const found = await this.prisma.user.findUnique({
       where: { email: input.email },
-      select: {
-        ...publicUserSelect,
-        passwordCredential: { select: { passwordHash: true } },
-      },
+      select: { id: true },
     });
-    const matches = await this.passwords.verify(
-      user?.passwordCredential?.passwordHash ?? this.dummyHash,
-      input.password,
-    );
-    if (!matches || !user?.passwordCredential)
+    if (!found) {
+      await this.passwords.verify(this.dummyHash, input.password);
       throw new UnauthorizedException('Invalid email or password');
-    const tokens = newTokens();
-    const expiresAt = new Date(Date.now() + REFRESH_LIFETIME_MS);
-    await this.prisma.authSession.create({
-      data: {
-        userId: user.id,
-        familyId: randomUUID(),
-        accessTokenHash: tokenHash(tokens.access),
-        refreshTokenHash: tokenHash(tokens.refresh),
-        accessExpiresAt: new Date(Date.now() + ACCESS_LIFETIME_MS),
-        expiresAt,
-      },
+    }
+    const result = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${found.id} FOR UPDATE`;
+      const credential = await tx.passwordCredential.findUnique({
+        where: { userId: found.id },
+      });
+      const matches = await this.passwords.verify(
+        credential?.passwordHash ?? this.dummyHash,
+        input.password,
+      );
+      if (!matches || !credential) return null;
+      const tokens = newTokens();
+      const expiresAt = new Date(Date.now() + REFRESH_LIFETIME_MS);
+      await tx.authSession.create({
+        data: {
+          userId: found.id,
+          familyId: randomUUID(),
+          accessTokenHash: tokenHash(tokens.access),
+          refreshTokenHash: tokenHash(tokens.refresh),
+          accessExpiresAt: new Date(Date.now() + ACCESS_LIFETIME_MS),
+          expiresAt,
+        },
+      });
+      return { tokens, expiresAt };
     });
-    return { tokens, expiresAt };
+    if (!result) throw new UnauthorizedException('Invalid email or password');
+    return result;
   }
 
   async me(token: string | undefined): Promise<PublicUser> {

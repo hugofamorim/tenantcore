@@ -18,7 +18,15 @@ import {
   type AuthenticatedRequest,
   SessionGuard,
 } from './auth.guards';
-import { LoginDto, RegisterDto } from './auth.dto';
+import {
+  EmailDto,
+  EmailTokenDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from './auth.dto';
+import { EmailActionsService } from './email-actions.service';
+import { EmailActionPurpose } from '../generated/prisma/client';
 
 @Controller('auth')
 @UseGuards(AuthOriginGuard, ThrottlerGuard)
@@ -27,6 +35,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly cookies: AuthCookies,
+    private readonly emailActions: EmailActionsService,
   ) {}
 
   @Post('register')
@@ -81,5 +90,45 @@ export class AuthController {
   @Header('Cache-Control', 'no-store')
   me(@Req() req: AuthenticatedRequest) {
     return { user: req.user };
+  }
+
+  @Post('resend-verification')
+  @HttpCode(202)
+  @Header('Cache-Control', 'no-store')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  resendVerification(@Body() input: EmailDto) {
+    return this.emailActions.request(
+      input.email,
+      EmailActionPurpose.VERIFY_EMAIL,
+    );
+  }
+
+  @Post('forgot-password')
+  @HttpCode(202)
+  @Header('Cache-Control', 'no-store')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  forgotPassword(@Body() input: EmailDto) {
+    return this.emailActions.request(
+      input.email,
+      EmailActionPurpose.RESET_PASSWORD,
+    );
+  }
+
+  @Post('verify-email')
+  @HttpCode(204)
+  @Header('Cache-Control', 'no-store')
+  async verifyEmail(@Body() input: EmailTokenDto) {
+    await this.emailActions.verifyEmail(input.token);
+  }
+
+  @Post('reset-password')
+  @HttpCode(204)
+  @Header('Cache-Control', 'no-store')
+  async resetPassword(
+    @Body() input: ResetPasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.emailActions.resetPassword(input.token, input.password);
+    this.cookies.clear(res);
   }
 }
