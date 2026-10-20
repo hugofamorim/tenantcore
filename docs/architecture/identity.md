@@ -56,9 +56,9 @@ adds only EmailAction and its purpose enum/indexes/foreign key.
 
 ## Boundaries and pending work
 
-Identity is personal, outside tenant scope. Organization, membership, invitations
-and RBAC workflows remain planned. Shared-database tenant isolation will require
-server-validated memberships in every organizational query; PostgreSQL RLS is
-not implemented. The first slice neither grants tenant access nor claims that
-unverified email is a proven identity. See the [roadmap](../roadmap.md) and
+Identity is personal, outside tenant scope. M2 adds verified-email-gated
+organization creation/list/details/settings with server-validated memberships
+and roles. Invitations and member mutations remain M3. PostgreSQL RLS is not
+implemented. Unverified personal identity grants no tenant access. See
+[organization boundaries](tenancy.md), the [roadmap](../roadmap.md) and
 [session ADR](../adr/0001-authentication-and-sessions.md).

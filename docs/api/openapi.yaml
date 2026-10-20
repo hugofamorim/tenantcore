@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: TenantCore API
-  version: 0.2.0
-  description: M1 personal identity, rotating sessions, email verification and password recovery.
+  version: 0.3.0
+  description: Personal identity, rotating sessions, email verification/recovery and organization-scoped settings/RBAC.
 servers:
   - url: http://localhost:3001
 paths:
@@ -160,6 +160,95 @@ paths:
         '400': { $ref: '#/components/responses/Invalid' }
         '403': { $ref: '#/components/responses/OriginRejected' }
         '429': { $ref: '#/components/responses/Throttled' }
+  /organizations:
+    get:
+      summary: List the caller's organizations and organization-relative roles
+      description: Requires verified email. Bounded membership pagination, no global tenant count; Cache-Control no-store.
+      security: [{ accessCookie: [] }]
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, maximum: 10000, default: 0 }
+      responses:
+        '200':
+          description: Only organizations whose membership belongs to the authenticated user
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, limit, offset, hasMore]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Organization' } }
+                  limit: { type: integer }
+                  offset: { type: integer }
+                  hasMore: { type: boolean }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Email verification required }
+        '429': { description: Organization request limit exceeded }
+    post:
+      summary: Atomically create an organization and its caller's OWNER membership
+      description: Requires verified email. Slug normalized by trimming/lowercasing; global collisions return 409. Clients cannot supply role, userId or organizationId.
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/OrganizationInput'
+              required: [name, slug]
+      responses:
+        '201': { $ref: '#/components/responses/OrganizationResult' }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Verification required or Origin rejected }
+        '409': { description: Slug unavailable; no organization or membership created }
+        '429': { description: Organization creation limit exceeded (10/minute/IP) }
+  /organizations/{organizationId}:
+    parameters:
+      - in: path
+        name: organizationId
+        required: true
+        schema: { type: string, format: uuid }
+        description: Stable UUIDv4. Not a claim of membership or authorization.
+    get:
+      summary: Read a public organization projection as a verified member
+      security: [{ accessCookie: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/OrganizationResult' }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Email verification required }
+        '404': { description: Organization absent or caller is not a member; identical response }
+        '429': { description: Organization request limit exceeded }
+    patch:
+      summary: Update organization name/slug as OWNER or ADMIN
+      description: Membership and role are read in the locked write transaction. MEMBER/VIEWER cannot edit. No tenant/role fields can be assigned.
+      security: [{ accessCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Origin'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/OrganizationInput'
+              minProperties: 1
+      responses:
+        '200': { $ref: '#/components/responses/OrganizationResult' }
+        '400': { $ref: '#/components/responses/Invalid' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { description: Verification required, role insufficient or Origin rejected }
+        '404': { description: Organization absent or caller is not a member }
+        '409': { description: Slug unavailable; stored settings unchanged }
+        '429': { description: Organization request limit exceeded }
 components:
   securitySchemes:
     accessCookie:
@@ -196,6 +285,28 @@ components:
         application/json:
           schema: { type: object }
   schemas:
+    OrganizationInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 2, maxLength: 80 }
+        slug:
+          type: string
+          minLength: 3
+          maxLength: 48
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+          description: Lowercase ASCII letters/digits separated by single hyphens; reserved names rejected.
+    Organization:
+      type: object
+      additionalProperties: false
+      required: [id, name, slug, role, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        role: { type: string, enum: [OWNER, ADMIN, MEMBER, VIEWER] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     EmailToken:
       type: object
       required: [token]
@@ -227,6 +338,15 @@ components:
             - { type: array, items: { type: string } }
         error: { type: string }
   responses:
+    OrganizationResult:
+      description: Public organization projection with the caller's role; Cache-Control no-store
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [organization]
+            properties:
+              organization: { $ref: '#/components/schemas/Organization' }
     EmailQueued:
       description: Generic response; queue is bounded/in-process and delivery is not guaranteed. Cache-Control is no-store.
       content:

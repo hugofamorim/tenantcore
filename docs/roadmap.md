@@ -56,9 +56,32 @@ mail outbox, retention cleanup, distributed rate limits/trusted proxy setup,
 production SMTP credentials and HTTPS deployment. No production deployment or
 public demo is claimed. Next product milestone: M2 organization/RBAC workflows.
 
+## M2 — Organizations and RBAC (implemented; CI acceptance tracked in TC-009 PR)
+
+TC-009 starts from the green M1 commit `ca6b690`; PR #2 remains unmerged.
+Implementation order and architectural decisions are in ADR 0003.
+
+- Implemented: atomic organization/OWNER creation, bounded membership listing,
+  organization details and OWNER/ADMIN name/slug updates.
+- Implemented: verified-email gate on every organizational request, live
+  membership/role checks, foreign/missing 404 parity and unknown-field rejection.
+- Implemented: per-tab URL selection, organization sidebar, details/settings,
+  read-only settings for MEMBER/VIEWER and loading/empty/error states.
+- Validation: tenant/role positive and negative tests, membership revocation,
+  rollback, concurrent slug collision, forms/client tests and browser journey.
+- Schema: one additive membership listing index; no existing rows are changed.
+- No invitation/member/role mutation, ownership transfer or audit claim in M2.
+  Those are M3 and must use the same organization lock as settings writes.
+
+Local acceptance: fourteen API unit tests, nineteen frontend tests, forty-five
+HTTP/PostgreSQL tests and three real Chromium journeys. The organization journey
+verifies email gating, two workspaces, per-tab switching, persisted settings,
+desktop/mobile rendering and outsider denial. The new forms use unique IDs so
+Next.js retained hidden pages cannot attach labels to another form. The PR records
+the final published SHA and Linux CI result. No production deployment is claimed.
+
 ## Later milestones (planned)
 
-- M2: organization creation/switching, membership policies and tenant isolation.
 - M3: invitations, membership lifecycle, ownership and audit records.
 - M4: real dashboard, accessibility, deploy/demo and operational hardening.
 - M5: optional post-MVP extensions only after M1–M4 acceptance.

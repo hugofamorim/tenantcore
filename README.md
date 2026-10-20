@@ -10,11 +10,13 @@ release implements the technical foundation and personal identity/authentication
 - Database-backed API `/health` and runtime web `/status`.
 - Account registration, login, authenticated account page, rotating sessions and logout.
 - Email verification, one-use password recovery and revocation of all sessions on reset.
+- Organization creation, membership-scoped list/details, per-tab switching and OWNER/ADMIN settings edits.
 - Argon2id passwords, hashed tokens, protected cookies, origin checks and request limits.
 - API unit/HTTP/database tests, React component tests and a real Chromium journey.
 
-Organizations, tenant authorization, invitations and auditing are **planned**,
-not completed. Read the [roadmap](docs/roadmap.md).
+Invitation/member lifecycle, ownership transfer, auditing and dashboard metrics
+are **planned**, not completed. Organization authorization is implemented for
+the existing organization routes. Read the [roadmap](docs/roadmap.md).
 Existing domain tables are not equivalent to implemented tenant features.
 
 ## Run locally
@@ -61,6 +63,33 @@ use real personal/customer addresses in a demonstration or captured inbox.
 ![Account page captured from the real browser test with a fictional user](docs/screenshots/account.png)
 
 ![Recovery completion captured from the real SMTP/browser journey](docs/screenshots/recovery.png)
+
+## Organizations
+
+Verify your email, then open "Your organizations" from `/account` (or visit
+`/organizations`). Create a workspace with a name and a unique slug. The caller
+becomes its sole OWNER in the same transaction. Use the sidebar selector to
+switch workspaces; selection is in the URL, so separate tabs remain independent.
+Settings allow OWNER/ADMIN to edit name/slug; MEMBER/VIEWER get a read-only view.
+
+Slugs are 3–48 lowercase ASCII letters/digits separated by single hyphens;
+reserved names such as `admin`, `api`, `auth` and `settings` are rejected. Global
+slug collisions return 409 instead of inventing a suffix. Renaming a slug does
+not change the organization UUID or its bookmarked URL. The list is paginated
+(20 by default, at most 100; offset at most 10,000) and only returns memberships
+of the authenticated caller. The UI can load more pages into its selector.
+
+Every organization API request requires an authenticated, email-verified user.
+The server rechecks membership and organization-relative role. A foreign or
+missing organization returns the same 404; a member with insufficient role gets
+403. Supplying a role or user/tenant ID in a mutation body is rejected; a forged
+tenant header grants no access. No member-change or organization-delete endpoint
+is exposed yet; those workflows and ownership transfer remain M3.
+
+![Organization overview captured from the real browser journey](docs/screenshots/organizations.png)
+
+The same journey checks mobile layout and independent organization context in
+separate tabs; [mobile capture](docs/screenshots/organizations-mobile.png).
 
 ## Quality checks
 
@@ -116,8 +145,10 @@ no running database. Unset test env variables before returning to development.
 ## Architecture and security
 
 - [Identity flow and boundaries](docs/architecture/identity.md)
+- [Organization isolation and role matrix](docs/architecture/tenancy.md)
 - [Authentication/session ADR](docs/adr/0001-authentication-and-sessions.md)
 - [Email verification/recovery ADR](docs/adr/0002-email-verification-and-recovery.md)
+- [Organization and tenant authorization ADR](docs/adr/0003-organizations-and-tenant-authorization.md)
 - [OpenAPI contract](docs/api/openapi.yaml)
 - [Roadmap and verified baseline](docs/roadmap.md)
 
