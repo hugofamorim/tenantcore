@@ -31,15 +31,20 @@ jobs:
       NODE_ENV: test
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm and Node
+      - name: Setup pnpm and Node.js
         uses: pnpm/setup@v3
         with:
-          runtime: |
-            node 24
+          runtime: node@24
+          cache: true
           require-lockfile: true
+
+      - name: Verify environment
+        run: |
+          node --version
+          pnpm --version
 
       - name: Generate Prisma Client
         run: pnpm --filter api exec prisma generate
