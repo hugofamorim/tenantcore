@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
+import { configureApp } from '../src/configure-app';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -12,15 +13,23 @@ describe('AppController (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({ bodyParser: false });
+    configureApp(app);
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it('/health (GET) verifies the real database', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/health')
       .expect(200)
-      .expect('Hello World!');
+      .expect(({ body }: { body: unknown }) => {
+        expect(body).toEqual({
+          status: 'ok',
+          service: 'tenantcore-api',
+          database: 'connected',
+          timestamp: expect.any(String),
+        });
+      });
   });
 
   afterEach(async () => {

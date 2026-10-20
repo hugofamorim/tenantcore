@@ -1,9 +1,15 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
+        <nav aria-label="Account" className="mb-8 flex flex-wrap gap-5 text-sm font-medium">
+          <Link href="/login" className="underline underline-offset-4">Sign in</Link>
+          <Link href="/register" className="underline underline-offset-4">Create account</Link>
+          <Link href="/status" className="underline underline-offset-4">Service status</Link>
+        </nav>
         <Image
           className="dark:invert h-5 w-[100px]"
           src="/next.svg"

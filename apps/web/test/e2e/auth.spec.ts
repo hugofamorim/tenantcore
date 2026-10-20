@@ -1,0 +1,38 @@
+import { expect, test } from "@playwright/test";
+
+test("register, login, renew, reload and logout through the real API", async ({ page, context }) => {
+  const email = `browser-${crypto.randomUUID()}@example.test`;
+  const password = "a browser test passphrase";
+  await page.goto("/account");
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByRole("link", { name: "Create an account", exact: true }).click();
+  await page.getByLabel("Full name").fill("Browser User");
+  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("You can now sign in");
+  await page.getByRole("link", { name: "Continue to sign in" }).click();
+  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("an incorrect long passphrase");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.locator("form").getByRole("alert")).toContainText("was not accepted");
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByText(email, { exact: true })).toBeVisible();
+  const initial = (await context.cookies()).find((cookie) => cookie.name === "tc_refresh");
+  expect(initial?.httpOnly).toBe(true);
+  expect(initial?.sameSite).toBe("Lax");
+  expect(await page.evaluate(() => document.cookie)).not.toContain("tc_access");
+  await page.getByRole("button", { name: "Renew session" }).click();
+  await expect(page.getByRole("status")).toHaveText("Your session has been renewed.");
+  expect((await context.cookies()).find((cookie) => cookie.name === "tc_refresh")?.value).not.toBe(initial?.value);
+  await page.reload();
+  await expect(page.getByText(email, { exact: true })).toBeVisible();
+  await page.screenshot({ path: "test-results/account.png", fullPage: true });
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  expect((await page.request.get("/api/auth/me")).status()).toBe(401);
+  await page.goto("/account");
+  await expect(page).toHaveURL(/\/login$/);
+});
