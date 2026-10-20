@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { authMutation, currentUser, renewSession, type PublicUser } from "@/lib/auth";
 import { navigateAfterAuth } from "@/lib/auth-navigation";
 
@@ -42,6 +43,7 @@ export function AccountPanel() {
         <div><dt className="text-sm text-zinc-600 dark:text-zinc-400">Email status</dt><dd className="mt-1">{user.emailVerifiedAt ? "Verified" : "Not verified"}</dd></div>
       </dl>
       <div className="flex flex-wrap gap-3">
+        <Link href="/organizations" className="rounded-lg border border-zinc-400 px-4 py-2">Your organizations</Link>
         {!user.emailVerifiedAt && <button className="rounded-lg border border-zinc-400 px-4 py-2 disabled:opacity-60" disabled={pending} onClick={() => void action("resend-verification")}>Send verification email</button>}
         <button className="rounded-lg bg-blue-700 px-4 py-2 text-white disabled:opacity-60" disabled={pending} onClick={() => void action("refresh")}>Renew session</button>
         <button className="rounded-lg border border-zinc-400 px-4 py-2 disabled:opacity-60" disabled={pending} onClick={() => void action("logout")}>Sign out</button>

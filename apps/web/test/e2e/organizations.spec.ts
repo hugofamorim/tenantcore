@@ -1,0 +1,80 @@
+import { expect, test } from "@playwright/test";
+import { emailFragment } from "./helpers/mailpit";
+
+test("verified organization creation, switching, settings and cross-tenant denial", async ({ page, context, browser }) => {
+  const unique = crypto.randomUUID().replaceAll("-", "").slice(0, 20);
+  const email = `org-browser-${unique}@example.test`;
+  const password = "an organization browser passphrase";
+  const north = `org-${unique}-north`;
+  const south = `org-${unique}-south`;
+  await page.goto("/register");
+  await page.getByLabel("Full name").fill("Workspace Owner");
+  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("You can now sign in");
+  await page.getByRole("link", { name: "Continue to sign in" }).click();
+  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByText(email, { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Your organizations" }).click();
+  await expect(page.getByRole("heading", { name: "Verify your email", exact: true })).toBeVisible();
+  expect((await page.request.get("/api/organizations")).status()).toBe(403);
+
+  const verification = await emailFragment(email, "Verify your TenantCore email");
+  await page.goto(`/verify-email${verification}`);
+  await page.getByRole("button", { name: "Verify email address" }).click();
+  await expect(page.getByRole("status")).toContainText("now verified");
+  await page.getByRole("link", { name: "Continue to your account" }).click();
+  await page.getByRole("link", { name: "Your organizations" }).click();
+  await expect(page.getByText("You have no organizations yet. Create your first workspace below.")).toBeVisible();
+  await page.getByRole("textbox", { name: "Organization name", exact: true }).fill("North Workspace");
+  await page.getByRole("textbox", { name: "Organization slug", exact: true }).fill(north);
+  await page.getByRole("button", { name: "Create organization", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "North Workspace", exact: true })).toBeVisible();
+  const firstId = new URL(page.url()).pathname.split("/")[2];
+  await page.getByRole("navigation", { name: "Workspace navigation" }).getByRole("link", { name: "Organizations", exact: true }).click();
+  await page.getByRole("textbox", { name: "Organization name", exact: true }).fill("South Workspace");
+  await page.getByRole("textbox", { name: "Organization slug", exact: true }).fill(south);
+  await page.getByRole("button", { name: "Create organization", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "South Workspace", exact: true })).toBeVisible();
+  const secondId = new URL(page.url()).pathname.split("/")[2];
+  expect(firstId).not.toBe(secondId);
+
+  await page.getByRole("combobox", { name: "Active organization", exact: true }).selectOption(firstId);
+  await expect(page.getByRole("heading", { name: "North Workspace", exact: true })).toBeVisible();
+  await page.getByRole("navigation", { name: "Workspace navigation" }).getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("textbox", { name: "Organization name", exact: true }).fill("North Studio");
+  await page.getByRole("textbox", { name: "Organization slug", exact: true }).fill(`${north}-updated`);
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("status")).toContainText("settings updated");
+  await expect(page).toHaveURL(new RegExp(`/organizations/${firstId}/settings$`));
+  await page.reload(); await expect(page.getByRole("textbox", { name: "Organization name", exact: true })).toHaveValue("North Studio");
+  const anotherTab = await context.newPage();
+  await anotherTab.goto(`/organizations/${firstId}`);
+  await expect(anotherTab.getByRole("heading", { name: "North Studio", exact: true })).toBeVisible();
+  await page.getByRole("combobox", { name: "Active organization", exact: true }).selectOption(secondId);
+  await expect(page.getByRole("heading", { name: "South Workspace", exact: true })).toBeVisible();
+  await anotherTab.reload(); await expect(anotherTab.getByRole("heading", { name: "North Studio", exact: true })).toBeVisible();
+  await page.screenshot({ path: "test-results/organizations.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: "test-results/organizations-mobile.png", fullPage: true });
+  await anotherTab.close();
+
+  const outsider = await browser.newContext({ baseURL: "http://127.0.0.1:3300" });
+  try {
+    const otherEmail = `outside-${unique}@example.test`;
+    const headers = { Origin: "http://127.0.0.1:3300" };
+    expect((await outsider.request.post("/api/auth/register", { headers, data: { name: "Outside User", email: otherEmail, password } })).status()).toBe(202);
+    const fragment = await emailFragment(otherEmail, "Verify your TenantCore email");
+    expect((await outsider.request.post("/api/auth/verify-email", { headers, data: { token: new URLSearchParams(fragment.slice(1)).get("token") } })).status()).toBe(204);
+    expect((await outsider.request.post("/api/auth/login", { headers, data: { email: otherEmail, password } })).status()).toBe(204);
+    expect((await outsider.request.get(`/api/organizations/${firstId}`)).status()).toBe(404);
+    expect((await outsider.request.patch(`/api/organizations/${firstId}`, { headers: { ...headers, "X-Organization-Id": secondId }, data: { name: "Forged update" } })).status()).toBe(404);
+    const outsiderPage = await outsider.newPage(); await outsiderPage.goto(`/organizations/${firstId}`);
+    await expect(outsiderPage.getByRole("main").getByRole("alert")).toContainText("Organization not found");
+    await expect(outsiderPage.getByRole("heading", { name: "North Studio", exact: true })).toHaveCount(0);
+  } finally { await outsider.close(); }
+});
