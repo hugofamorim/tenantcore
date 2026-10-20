@@ -45,6 +45,7 @@ const roleDescriptions = {
   MEMBER: "Workspace membership",
   VIEWER: "Read-only access",
 };
+const organizationRoles = ["OWNER", "ADMIN", "MEMBER", "VIEWER"] as const;
 
 function MetricCard({
   title,
@@ -232,25 +233,21 @@ function DashboardContent({
               </CardHeader>
               <CardContent className="pt-1">
                 <dl className="divide-y">
-                  {Object.entries(data.membersByRole).map(([role, total]) => (
+                  {organizationRoles.map((role) => (
                     <div
                       key={role}
                       className="flex items-center justify-between gap-4 py-4"
                     >
-                      <div>
-                        <dt className="text-xs font-semibold tracking-wide">
+                      <dt>
+                        <span className="block text-xs font-semibold tracking-wide">
                           {role}
-                        </dt>
-                        <dd className="mt-1 text-xs text-muted-foreground">
-                          {
-                            roleDescriptions[
-                              role as keyof typeof roleDescriptions
-                            ]
-                          }
-                        </dd>
-                      </div>
+                        </span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {roleDescriptions[role]}
+                        </span>
+                      </dt>
                       <dd className="rounded-md bg-muted px-2.5 py-1 text-sm font-semibold tabular-nums">
-                        {total}
+                        {data.membersByRole[role]}
                       </dd>
                     </div>
                   ))}

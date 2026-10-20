@@ -233,7 +233,7 @@ export function OrganizationsPanel({
       {selected && (
         <>
           <div className="mb-7 flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="min-w-0 break-words text-3xl font-semibold tracking-tight">
               {dashboard
                 ? "Dashboard"
                 : section
