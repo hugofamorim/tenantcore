@@ -2,18 +2,19 @@
 
 An open-source SaaS reference built with Next.js, NestJS, PostgreSQL, Prisma and
 TypeScript. The goal is a well-tested multi-organization product; the current
-release implements the technical foundation and the first identity slice.
+release implements the technical foundation and personal identity/authentication.
 
 ## What works today
 
 - pnpm/Turborepo workspace, PostgreSQL Compose and versioned Prisma migrations.
 - Database-backed API `/health` and runtime web `/status`.
 - Account registration, login, authenticated account page, rotating sessions and logout.
+- Email verification, one-use password recovery and revocation of all sessions on reset.
 - Argon2id passwords, hashed tokens, protected cookies, origin checks and request limits.
 - API unit/HTTP/database tests, React component tests and a real Chromium journey.
 
-Email verification/recovery, organizations, tenant authorization, invitations and
-auditing are **planned**, not completed. Read the [roadmap](docs/roadmap.md).
+Organizations, tenant authorization, invitations and auditing are **planned**,
+not completed. Read the [roadmap](docs/roadmap.md).
 Existing domain tables are not equivalent to implemented tenant features.
 
 ## Run locally
@@ -44,9 +45,22 @@ pnpm --filter web dev
 Open [registration](http://localhost:3000/register), create a fictional account,
 then sign in. `/account` shows the real API identity and supports renewal and
 logout. `/status` remains available independently. The web proxies `/api/auth/*`
-to `API_URL`; no token is exposed to browser JavaScript.
+to `API_URL`; session tokens stay in HttpOnly cookies, outside browser JavaScript.
+
+Open [local Mailpit](http://localhost:8025) for the verification message, follow
+its link and confirm the action. Use "Forgot your password?" on sign-in to test
+recovery. Recovery changes the password, proves email ownership and signs out
+all existing sessions. Links expire (verification: 30 minutes; reset: 15 minutes)
+and are single-use. Reissuing an eligible link invalidates older links of that
+purpose. Check Mailpit rather than expecting external delivery in development.
+
+Mailpit binds only to loopback (SMTP 1025, inbox 8025); keep it private. If an
+existing `.env` lacks SMTP settings, development defaults match Compose. Never
+use real personal/customer addresses in a demonstration or captured inbox.
 
 ![Account page captured from the real browser test with a fictional user](docs/screenshots/account.png)
+
+![Recovery completion captured from the real SMTP/browser journey](docs/screenshots/recovery.png)
 
 ## Quality checks
 
@@ -94,22 +108,35 @@ docker compose -p tenantcore-m1-test -f compose.test.yaml down
 
 Browser tests start their own API on 3301 and web dev server on 3300, with no
 mock backend; keep those ports free. They use fictional accounts in the test
-database. The CI runs all these gates on Linux with PostgreSQL. Unit tests need
+database. Test Mailpit uses SMTP 11025 and inbox 18025; tests pick those defaults
+(CI explicitly uses 1025/8025). `SMTP_PORT` and `MAILPIT_URL` can override them.
+The CI runs all these gates on Linux with PostgreSQL and SMTP. Unit tests need
 no running database. Unset test env variables before returning to development.
 
 ## Architecture and security
 
 - [Identity flow and boundaries](docs/architecture/identity.md)
 - [Authentication/session ADR](docs/adr/0001-authentication-and-sessions.md)
+- [Email verification/recovery ADR](docs/adr/0002-email-verification-and-recovery.md)
 - [OpenAPI contract](docs/api/openapi.yaml)
 - [Roadmap and verified baseline](docs/roadmap.md)
 
-API configuration validates `DATABASE_URL`, `WEB_ORIGIN`, `PORT` and `NODE_ENV`
+API configuration validates database, web origin, port, environment and SMTP
 at startup. Production requires an HTTPS `WEB_ORIGIN`, `NODE_ENV=production`,
 HTTPS termination, and the web/API behind the documented same-origin proxy.
 Production cookies use the `__Host-` prefix and Secure flag. Do not deploy
 development cookie settings publicly. Rate limiting is single-process; shared
 storage and a trusted-proxy policy are prerequisites for multiple instances.
+
+Production requires explicit `SMTP_HOST`/`SMTP_FROM`, `SMTP_PORT` (normally 587
+with `SMTP_REQUIRE_TLS=true`, or 465 with `SMTP_SECURE=true`) and optional paired
+`SMTP_USER`/`SMTP_PASSWORD`. TLS certificate validation remains enabled. Email
+request endpoints return generic 202 responses, including unknown accounts,
+cooldown and delivery failures; this is acceptance, not proof of delivery.
+The 32-job/two-worker in-process mail queue is non-durable: resend after failure
+or restart. A durable encrypted outbox and retention cleanup remain operational
+hardening work. No tokens or raw SMTP errors are logged. Local Mailpit does not
+relay messages externally.
 
 The identity migration is additive: existing users and memberships remain;
 legacy users have no fabricated credentials or verification. Roll back an app

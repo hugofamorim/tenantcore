@@ -1,6 +1,6 @@
 # ADR 0001: API-owned credentials and opaque rotating sessions
 
-Status: accepted for the first M1 slice; email verification/recovery remain planned.
+Status: accepted; extended by ADR 0002 for email verification/recovery.
 
 ## Context
 
@@ -55,8 +55,9 @@ replace edge protections or a production security review.
 
 The first slice permits login before email verification for personal identity;
 it must not imply ownership of that email for invitations or tenant access.
-Verification/recovery, mail delivery, session cleanup, breached-password checks,
-MFA, distributed limits and audit events are explicit follow-up work.
+Verification/recovery and SMTP delivery are implemented in ADR 0002. Session
+cleanup, breached-password checks, MFA, distributed limits and audit events
+remain explicit follow-up work.
 
 ## References
 

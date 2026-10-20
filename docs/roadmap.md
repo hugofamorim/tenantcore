@@ -13,7 +13,7 @@ Prisma migrations and User/Organization/Membership models, database-backed
 were not implemented. The web had no tests; the API HTTP test still expected
 the removed starter endpoint. M0 documentation/env setup needs completion.
 
-## M1 — Identity & Authentication (in progress)
+## M1 — Identity & Authentication (implemented; acceptance tracked in PR #2)
 
 Deliver in reviewable increments:
 
@@ -23,15 +23,16 @@ Deliver in reviewable increments:
 3. **First usable slice (implemented; CI acceptance tracked in PR):** register, login, me, refresh and logout; validated
    inputs, safe responses, origin checks and request limits; browser forms and
    account page; API/database and UI/browser tests; OpenAPI contract and setup.
-4. **Next slice (planned):** one-use email verification and password reset,
+4. **Email identity slice (implemented):** one-use email verification and password reset,
    hashed expiring tokens, dev mail delivery, non-enumerating recovery/resend,
    session revocation after password reset, forms and abuse/expiry tests.
-5. **M1 acceptance (planned):** verify the complete account recovery journey,
+5. **M1 acceptance (local checks passed; published CI tracked in PR):** verify the complete account recovery journey,
    review production security/deployment settings and update evidence.
 
-The first slice does **not** complete M1. Unverified accounts can use their
-personal account only; no tenant API or authorization is exposed by this slice.
-Verification must gate organization access when that capability is introduced.
+The first slice alone did not complete M1. The second implements verification,
+recovery and actual SMTP/browser acceptance. Unverified accounts can still use
+personal identity only; no tenant API or authorization is exposed. Verification
+must gate organization access when that capability is introduced in M2.
 
 Local acceptance evidence on Windows / Node 24: frozen-lockfile installation,
 lint without warnings, typecheck, seven API unit tests, seven web component/client
@@ -39,7 +40,21 @@ tests, sixteen HTTP/PostgreSQL tests and one real Chromium journey passed.
 Production builds passed for both apps. Prisma validation and schema/database
 diff passed; migrations were applied to both a clean isolated test database and
 the existing local database. The CI now runs the HTTP and browser tests as gates.
-The PR records the exact published SHA and final Linux CI result.
+The PR records the exact published SHA and final Linux CI result. This first-slice
+evidence is superseded by the second-slice acceptance below.
+
+Second-slice local evidence: nine API unit tests, eleven frontend tests,
+twenty-seven HTTP/PostgreSQL tests and two Chromium journeys pass. Email tests
+use a real local SMTP capture and cover expiry, reuse, replacement, purpose
+confusion, delivery failure, generic responses, legacy enrollment and concurrent
+reset/login. All static/build checks remain enabled. A cached unauthenticated
+Next.js redirect discovered in the new journey is fixed by a new-document
+navigation after session-cookie changes.
+
+Remaining operational hardening (not hidden MVP functionality): durable encrypted
+mail outbox, retention cleanup, distributed rate limits/trusted proxy setup,
+production SMTP credentials and HTTPS deployment. No production deployment or
+public demo is claimed. Next product milestone: M2 organization/RBAC workflows.
 
 ## Later milestones (planned)
 
