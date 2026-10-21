@@ -48,6 +48,19 @@ Existing forms inherit the font/theme foundation. Their full component migration
 is a later slice; preserve field names, labels, native form behavior and secure
 authentication navigation when working on those screens.
 
+All content cards, including legacy authentication, account, organization and
+status screens, use `bg-card text-card-foreground`. In dark mode this is the
+dashboard's blue surface (`#111c2e`) over `bg-background` (`#0b1120`). Inputs use
+the same surface; borders and secondary text use semantic tokens. Avoid local
+`bg-white`/`dark:bg-zinc-*` overrides, which disconnect screens from the palette.
+
+`NativeSelect` centralizes organization and role selectors without changing
+native keyboard, form submission, reset or disabled behavior. The root theme
+declares `color-scheme`; option/optgroup surfaces use popover tokens and selected
+options use accent tokens. Native popup rendering remains browser/OS dependent;
+the color scheme supplies the platform hint alongside explicit option colors.
+Use this component for future native selects rather than duplicating styles.
+
 ## Interaction and accessibility
 
 - Links expose `aria-current="page"`. A skip link reaches the main workspace.
@@ -98,3 +111,11 @@ browser suites concurrently against the same test database.
 Browser assertions allow 10 seconds for development's cold route compilation;
 the total journey timeout and every functional/accessibility assertion remain
 enabled. This is not a production latency budget.
+
+The `appearance` browser project compares actual card colors against the live
+dashboard across account, authentication, organization, collaboration and public
+screens in both themes. It checks native option colors/color scheme, runs axe on
+account and invitation screens, and captures dark-mode evidence. Run it through
+`pnpm --filter web test:e2e`, which starts fresh API/web servers for each of the
+four project groups to preserve production rate limits. The component suite also
+covers native selector submission, reset and disabled behavior.

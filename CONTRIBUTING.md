@@ -21,8 +21,8 @@ For visual changes, follow the [UI foundation guide](docs/architecture/ui-founda
 Keep shadcn primitives separate from domain controllers; use semantic theme tokens
 and respect reduced motion. Verify keyboard/focus behavior, real API states and
 mobile overflow, and inspect screenshots in light/dark themes. Axe audits cover
-the changed dashboard and complement functional tests; they are not a declaration
-of complete accessibility compliance.
+the dashboard, account and invitation screens and complement functional tests;
+they are not a declaration of complete accessibility compliance.
 
 Tenant authorization belongs to the API: verified identity, current membership,
 organization-relative role and scoped resource lookup on every operation. Share

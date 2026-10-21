@@ -151,6 +151,11 @@ back to the account/organizations.
 [Dark dashboard](docs/screenshots/dashboard-dark.png) ·
 [Mobile navigation](docs/screenshots/dashboard-navigation-mobile.png).
 
+Shared dark surfaces across screens:
+[Organization settings](docs/screenshots/settings-dark.png) ·
+[Invitations](docs/screenshots/invitations-dark.png) ·
+[Account](docs/screenshots/account-dark.png).
+
 The workspace UI uses owned shadcn/ui components, semantic light/dark/system
 themes, a responsive navigation sheet and subtle reduced-motion-aware dashboard
 transitions. See the [UI foundation guide](docs/architecture/ui-foundation.md)
@@ -216,7 +221,7 @@ Browser tests start their own API on 3301 and web dev server on 3300, with no
 mock backend; keep those ports free. They use fictional accounts in the test
 database. Test Mailpit uses SMTP 11025 and inbox 18025; tests pick those defaults
 (CI explicitly uses 1025/8025). `SMTP_PORT` and `MAILPIT_URL` can override them.
-`test:e2e` runs identity/organization, collaboration and operations/dashboard
+`test:e2e` runs identity/organization, collaboration, operations/dashboard and appearance
 projects, stopping/starting fresh servers between groups. This prevents independent fictional
 accounts on the same loopback IP exhausting one another's real rate-limit budget;
 no API limits are disabled or increased. For one journey, use
