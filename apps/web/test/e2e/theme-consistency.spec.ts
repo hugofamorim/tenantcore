@@ -185,7 +185,10 @@ test("content surfaces and native option lists follow the chosen theme across sc
     await expectSurface(page.getByRole("main"));
     await page.goto("/status");
     await expectSurface(
-      page.getByText("All systems operational", { exact: true }).locator(".."),
+      page
+        .getByRole("main")
+        .getByText("All systems operational", { exact: true })
+        .locator(".."),
     );
     await page.goto("/");
     await expectSurface(
