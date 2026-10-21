@@ -8,7 +8,7 @@ export function AccessProblem({
   message: string;
 }) {
   return (
-    <section className="rounded-xl border border-red-400 bg-white p-5 dark:bg-zinc-900">
+    <section className="rounded-xl border border-red-400 bg-card text-card-foreground p-5">
       <h2 className="text-xl font-semibold">
         {status === 403
           ? "Access denied"

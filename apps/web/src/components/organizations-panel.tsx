@@ -169,7 +169,7 @@ export function OrganizationsPanel({
       )}
       {!user && !error && <p role="status">Loading your workspace…</p>}
       {user && !user.emailVerifiedAt && (
-        <section className="rounded-xl border border-zinc-300 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
           <h1 className="text-2xl font-semibold">Verify your email</h1>
           <p className="mt-3">
             Confirm your email address before creating or accessing
@@ -191,7 +191,7 @@ export function OrganizationsPanel({
           <h1 className="text-3xl font-semibold tracking-tight">
             Your organizations
           </h1>
-          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+          <p className="mt-2 text-muted-foreground">
             Choose a workspace or create a new one.
           </p>
           <section
@@ -202,26 +202,26 @@ export function OrganizationsPanel({
               <Link
                 key={item.id}
                 href={`/organizations/${item.id}`}
-                className="rounded-xl border border-zinc-200 bg-white p-5 hover:border-blue-500 dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded-xl border border-border bg-card text-card-foreground p-5 hover:border-blue-500"
               >
                 <h2 className="text-lg font-semibold">{item.name}</h2>
-                <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="mt-2 text-sm text-muted-foreground">
                   {item.slug}
                 </p>
-                <span className="mt-4 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium dark:bg-zinc-800">
+                <span className="mt-4 inline-block rounded-full bg-secondary text-secondary-foreground px-3 py-1 text-xs font-medium">
                   {item.role}
                 </span>
               </Link>
             ))}
             {page.items.length === 0 && (
-              <p className="text-zinc-600 dark:text-zinc-400">
+              <p className="text-muted-foreground">
                 You have no organizations yet. Create your first workspace
                 below.
               </p>
             )}
           </section>
           <section
-            className="mt-9 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900"
+            className="mt-9 rounded-xl border border-border bg-card text-card-foreground p-6"
             aria-labelledby="create-heading"
           >
             <h2 id="create-heading" className="mb-5 text-xl font-semibold">
@@ -268,7 +268,7 @@ export function OrganizationsPanel({
               section={section}
             />
           ) : settings ? (
-            <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+            <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
               <OrganizationForm
                 key={selected.updatedAt}
                 existing={selected}
@@ -276,23 +276,23 @@ export function OrganizationsPanel({
               />
             </section>
           ) : (
-            <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+            <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
               <h2 className="text-lg font-semibold">Organization details</h2>
               <dl className="mt-5 space-y-4">
                 <div>
-                  <dt className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <dt className="text-sm text-muted-foreground">
                     Slug
                   </dt>
                   <dd className="mt-1">{selected.slug}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <dt className="text-sm text-muted-foreground">
                     Your role
                   </dt>
                   <dd className="mt-1">{selected.role}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <dt className="text-sm text-muted-foreground">
                     Created
                   </dt>
                   <dd className="mt-1">

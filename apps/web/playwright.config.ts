@@ -21,10 +21,15 @@ export default defineConfig({
   projects: [
     {
       name: "identity-and-organizations",
-      testIgnore: ["**/members.spec.ts", "**/dashboard.spec.ts"],
+      testIgnore: [
+        "**/members.spec.ts",
+        "**/dashboard.spec.ts",
+        "**/theme-consistency.spec.ts",
+      ],
     },
     { name: "collaboration", testMatch: "**/members.spec.ts" },
     { name: "operations", testMatch: "**/dashboard.spec.ts" },
+    { name: "appearance", testMatch: "**/theme-consistency.spec.ts" },
   ],
   use: { baseURL: "http://127.0.0.1:3300", ...devices["Desktop Chrome"] },
   webServer: [

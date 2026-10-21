@@ -25,7 +25,7 @@ export function EmailRequestForm({ mode }: { mode: "forgot-password" | "resend-v
       <form className="space-y-5" onSubmit={submit} aria-busy={pending}>
         <div>
           <label htmlFor="email" className="block text-sm font-medium">Email address</label>
-          <input className="mt-2 w-full rounded-lg border border-zinc-400 bg-transparent px-3 py-2.5 outline-offset-4 focus:outline-2 focus:outline-blue-600"
+          <input className="mt-2 w-full rounded-lg border border-input bg-card text-card-foreground px-3 py-2.5 outline-offset-4 focus:outline-2 focus:outline-ring"
             id="email" name="email" type="email" autoComplete="email" required maxLength={254} disabled={pending} />
         </div>
         {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}

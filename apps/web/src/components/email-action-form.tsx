@@ -32,13 +32,13 @@ export function EmailActionForm({ mode }: { mode: "verify-email" | "reset-passwo
     <Link className="font-medium underline underline-offset-4" href={reset ? "/login" : "/account"}>{reset ? "Continue to sign in" : "Continue to your account"}</Link>
   </div>;
 
-  const inputClass = "mt-2 w-full rounded-lg border border-zinc-400 bg-transparent px-3 py-2.5 outline-offset-4 focus:outline-2 focus:outline-blue-600";
+  const inputClass = "mt-2 w-full rounded-lg border border-input bg-card text-card-foreground px-3 py-2.5 outline-offset-4 focus:outline-2 focus:outline-ring";
   return <form className="space-y-5" onSubmit={submit} aria-busy={pending}>
     {reset && <>
       <div>
         <label htmlFor="password" className="block text-sm font-medium">New password</label>
         <input className={inputClass} id="password" name="password" type="password" autoComplete="new-password" required minLength={15} maxLength={128} disabled={pending} aria-describedby="password-help" />
-        <p id="password-help" className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Use a unique passphrase of 15–128 characters.</p>
+        <p id="password-help" className="mt-2 text-sm text-muted-foreground">Use a unique passphrase of 15–128 characters.</p>
       </div>
       <div>
         <label htmlFor="confirm-password" className="block text-sm font-medium">Confirm new password</label>

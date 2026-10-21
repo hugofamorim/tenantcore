@@ -84,5 +84,5 @@ jobs:
       - name: Validate HTTPS proxy configuration
         run: docker run --rm -e TENANTCORE_DOMAIN=tenantcore.example.test -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.11.7 caddy validate --config /etc/caddy/Caddyfile
 
-      - name: Browser identity, tenant, collaboration and dashboard journeys
+      - name: Browser identity, tenant, collaboration, dashboard and appearance journeys
         run: pnpm --filter web test:e2e
