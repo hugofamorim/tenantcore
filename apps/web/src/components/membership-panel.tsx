@@ -1,5 +1,7 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/native-select";
+
 import {
   useCallback,
   useEffect,
@@ -23,9 +25,10 @@ import {
 import type { Organization } from "@/lib/organizations";
 
 export type ManagementSection = "members" | "invitations" | "audit";
-const inputClass = "rounded-lg border border-zinc-400 bg-transparent px-3 py-2";
+const inputClass =
+  "rounded-lg border border-input bg-card text-card-foreground px-3 py-2";
 const buttonClass =
-  "rounded-lg border border-zinc-400 px-3 py-2 text-sm font-medium disabled:opacity-50";
+  "rounded-lg border border-input px-3 py-2 text-sm font-medium disabled:opacity-50";
 const manages = (actor: string, target: string) =>
   actor === "OWNER"
     ? target !== "OWNER"
@@ -62,7 +65,7 @@ function ConfirmationDialog({
         event.preventDefault();
         if (!pending) dismiss();
       }}
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-zinc-400 bg-white p-6 text-zinc-900 backdrop:bg-black/40 dark:bg-zinc-900 dark:text-zinc-100"
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-input bg-card text-card-foreground p-6 backdrop:bg-black/40"
     >
       <h2 id={titleId} className="text-xl font-semibold">
         {value.title}
@@ -109,15 +112,13 @@ function MemberRow({
   const editable =
     member.user.id !== userId && manages(organization.role, member.role);
   return (
-    <tr className="border-t border-zinc-200 dark:border-zinc-700">
+    <tr className="border-t border-border">
       <td className="p-3">
         <p className="font-medium">{member.user.name}</p>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {member.user.email}
-        </p>
+        <p className="text-sm text-muted-foreground">{member.user.email}</p>
       </td>
       <td className="p-3">
-        <span className="rounded-full border border-zinc-400 px-2 py-1 text-xs">
+        <span className="rounded-full border border-input px-2 py-1 text-xs">
           {member.role}
         </span>
       </td>
@@ -128,7 +129,7 @@ function MemberRow({
               <label htmlFor={roleId} className="sr-only">
                 Role for {member.user.email}
               </label>
-              <select
+              <NativeSelect
                 id={roleId}
                 className={inputClass}
                 disabled={pending}
@@ -142,7 +143,7 @@ function MemberRow({
                 )}
                 <option value="MEMBER">MEMBER</option>
                 <option value="VIEWER">VIEWER</option>
-              </select>
+              </NativeSelect>
               <button
                 className={buttonClass}
                 disabled={pending || role === member.role}
@@ -409,7 +410,7 @@ export function MembershipPanel({
         (organization.role === "OWNER" || organization.role === "ADMIN") && (
           <form
             onSubmit={(event) => void invite(event)}
-            className="space-y-4 rounded-xl border border-zinc-300 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900"
+            className="space-y-4 rounded-xl border border-border bg-card text-card-foreground p-5"
           >
             <h2 className="text-xl font-semibold">Invite a member</h2>
             <div className="flex flex-col gap-2">
@@ -426,7 +427,7 @@ export function MembershipPanel({
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor={roleId}>Invitation role</label>
-              <select
+              <NativeSelect
                 id={roleId}
                 name="role"
                 defaultValue="MEMBER"
@@ -438,9 +439,9 @@ export function MembershipPanel({
                 )}
                 <option value="MEMBER">MEMBER</option>
                 <option value="VIEWER">VIEWER</option>
-              </select>
+              </NativeSelect>
             </div>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               Links expire after 24 hours. Reissuing replaces the previous link.
               OWNER is assigned only through ownership transfer.
             </p>
@@ -453,7 +454,7 @@ export function MembershipPanel({
           </form>
         )}
       {members && section === "members" && (
-        <div className="overflow-x-auto rounded-xl border border-zinc-300 dark:border-zinc-700">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card text-card-foreground">
           <table className="w-full text-left text-sm">
             <caption className="p-3 text-left font-semibold">
               Organization members
@@ -484,7 +485,7 @@ export function MembershipPanel({
         </div>
       )}
       {invitations && section === "invitations" && (
-        <div className="overflow-x-auto rounded-xl border border-zinc-300 dark:border-zinc-700">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card text-card-foreground">
           <table className="w-full text-left text-sm">
             <caption className="p-3 text-left font-semibold">
               Organization invitations
@@ -499,13 +500,10 @@ export function MembershipPanel({
             </thead>
             <tbody>
               {invitations.items.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-t border-zinc-200 dark:border-zinc-700"
-                >
+                <tr key={row.id} className="border-t border-border">
                   <td className="p-3">{row.email}</td>
                   <td className="p-3">
-                    <span className="rounded-full border border-zinc-400 px-2 py-1 text-xs">
+                    <span className="rounded-full border border-input px-2 py-1 text-xs">
                       {row.role}
                     </span>
                     <p className="mt-2">{row.status}</p>
@@ -576,13 +574,13 @@ export function MembershipPanel({
           {events.items.map((row) => (
             <article
               key={row.id}
-              className="rounded-xl border border-zinc-300 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-xl border border-border bg-card text-card-foreground p-4"
             >
               <h2 className="break-words font-medium">{row.action}</h2>
               <p className="mt-2 text-sm">
                 {new Date(row.createdAt).toLocaleString()}
               </p>
-              <dl className="mt-3 space-y-2 break-all text-xs text-zinc-600 dark:text-zinc-400">
+              <dl className="mt-3 space-y-2 break-all text-xs text-muted-foreground">
                 <div>
                   <dt className="font-medium">Actor ID</dt>
                   <dd>{row.actorId ?? "Deleted account"}</dd>

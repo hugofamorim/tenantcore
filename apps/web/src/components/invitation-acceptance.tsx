@@ -66,10 +66,10 @@ export function InvitationAcceptance() {
   }
   return (
     <div className="mx-auto flex min-h-screen max-w-lg items-center p-6">
-      <main className="w-full space-y-5 rounded-xl border border-zinc-300 p-6 dark:border-zinc-700">
+      <main className="w-full space-y-5 rounded-xl border border-border bg-card text-card-foreground p-6">
         <Link
           href="/"
-          className="font-semibold text-blue-700 dark:text-blue-300"
+          className="font-semibold text-primary"
         >
           TenantCore
         </Link>
@@ -119,7 +119,7 @@ export function InvitationAcceptance() {
             >
               {pending ? "Accepting…" : "Accept invitation"}
             </button>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               If this is the wrong account, sign out from your account page and
               sign in with the invited email, then reopen the email link.
             </p>
