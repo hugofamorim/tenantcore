@@ -33,12 +33,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   if (complete) return (
     <div className="space-y-5">
       <p role="status">If this email is available, your account has been created. You can now sign in.</p>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">Check your inbox for a verification email.</p>
+      <p className="text-sm text-muted-foreground">Check your inbox for a verification email.</p>
       <Link className="font-medium underline underline-offset-4" href="/login">Continue to sign in</Link>
     </div>
   );
 
-  const inputClass = "mt-2 w-full rounded-lg border border-zinc-400 bg-transparent px-3 py-2.5 outline-offset-4 focus:outline-2 focus:outline-blue-600";
+  const inputClass = "mt-2 w-full rounded-lg border border-input bg-card text-card-foreground px-3 py-2.5 outline-offset-4 focus:outline-2 focus:outline-ring";
   return (
     <form onSubmit={submit} className="space-y-5" aria-busy={pending}>
       {register && <div>
@@ -53,7 +53,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <label htmlFor="password" className="block text-sm font-medium">Password</label>
         <input className={inputClass} id="password" name="password" type="password" autoComplete={register ? "new-password" : "current-password"}
           minLength={15} maxLength={128} required disabled={pending} aria-describedby={register ? "password-help" : undefined} />
-        {register && <p id="password-help" className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Use 15–128 characters. A long, unique passphrase works well.</p>}
+        {register && <p id="password-help" className="mt-2 text-sm text-muted-foreground">Use 15–128 characters. A long, unique passphrase works well.</p>}
       </div>
       {error && <p role="alert" className="rounded-lg border border-red-400 p-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
       {!register && <Link className="block text-sm underline underline-offset-4" href="/forgot-password">Forgot your password?</Link>}

@@ -51,21 +51,21 @@ export function AccountPanel() {
     {!user && !error && <p role="status">Loading your account…</p>}
     {user && <>
       <dl className="space-y-4">
-        <div><dt className="text-sm text-zinc-600 dark:text-zinc-400">Name</dt><dd className="mt-1 font-medium">{user.name}</dd></div>
-        <div><dt className="text-sm text-zinc-600 dark:text-zinc-400">Email address</dt><dd className="mt-1 break-words">{user.email}</dd></div>
-        <div><dt className="text-sm text-zinc-600 dark:text-zinc-400">Email status</dt><dd className="mt-1">{user.emailVerifiedAt ? "Verified" : "Not verified"}</dd></div>
+        <div><dt className="text-sm text-muted-foreground">Name</dt><dd className="mt-1 font-medium">{user.name}</dd></div>
+        <div><dt className="text-sm text-muted-foreground">Email address</dt><dd className="mt-1 break-words">{user.email}</dd></div>
+        <div><dt className="text-sm text-muted-foreground">Email status</dt><dd className="mt-1">{user.emailVerifiedAt ? "Verified" : "Not verified"}</dd></div>
       </dl>
-      <form onSubmit={event => void saveName(event)} className="space-y-3 rounded-lg border border-zinc-300 p-4 dark:border-zinc-700">
+      <form onSubmit={event => void saveName(event)} className="space-y-3 rounded-lg border border-border bg-card text-card-foreground p-4">
         <label htmlFor={nameId} className="block text-sm font-medium">Display name</label>
-        <input key={user.name} id={nameId} name="name" defaultValue={user.name} autoComplete="name" required minLength={2} maxLength={80} disabled={pending} className="w-full rounded-lg border border-zinc-400 bg-transparent px-3 py-2" />
+        <input key={user.name} id={nameId} name="name" defaultValue={user.name} autoComplete="name" required minLength={2} maxLength={80} disabled={pending} className="w-full rounded-lg border border-input bg-card text-card-foreground px-3 py-2" />
         <button disabled={pending} className="rounded-lg bg-blue-700 px-4 py-2 text-white disabled:opacity-60">Save display name</button>
       </form>
       <Link href="/forgot-password" className="inline-block text-sm underline">Reset your password</Link>
       <div className="flex flex-wrap gap-3">
-        <Link href="/organizations" className="rounded-lg border border-zinc-400 px-4 py-2">Your organizations</Link>
-        {!user.emailVerifiedAt && <button className="rounded-lg border border-zinc-400 px-4 py-2 disabled:opacity-60" disabled={pending} onClick={() => void action("resend-verification")}>Send verification email</button>}
+        <Link href="/organizations" className="rounded-lg border border-input px-4 py-2">Your organizations</Link>
+        {!user.emailVerifiedAt && <button className="rounded-lg border border-input px-4 py-2 disabled:opacity-60" disabled={pending} onClick={() => void action("resend-verification")}>Send verification email</button>}
         <button className="rounded-lg bg-blue-700 px-4 py-2 text-white disabled:opacity-60" disabled={pending} onClick={() => void action("refresh")}>Renew session</button>
-        <button className="rounded-lg border border-zinc-400 px-4 py-2 disabled:opacity-60" disabled={pending} onClick={() => void action("logout")}>Sign out</button>
+        <button className="rounded-lg border border-input px-4 py-2 disabled:opacity-60" disabled={pending} onClick={() => void action("logout")}>Sign out</button>
       </div>
     </>}
     {error && <div><p role="alert" className="text-red-700 dark:text-red-300">{error}</p><button className="mt-3 underline" onClick={() => window.location.reload()}>Try again</button></div>}

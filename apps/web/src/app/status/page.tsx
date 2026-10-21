@@ -19,7 +19,7 @@ async function StatusContent() {
 
   return (
     <div
-      className={`rounded-xl border p-6 ${
+      className={`rounded-xl border bg-card text-card-foreground p-6 ${
         isHealthy
           ? 'border-green-500/30'
           : 'border-red-500/30'
@@ -38,13 +38,13 @@ async function StatusContent() {
       {health ? (
         <dl className="mt-4 space-y-2">
           <div>
-            <dt className="text-sm text-gray-500">API</dt>
+            <dt className="text-sm text-muted-foreground">API</dt>
             <dd>{health.service}</dd>
           </div>
 
         </dl>
       ) : (
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-2 text-sm text-muted-foreground">
           The service could not be reached. Please try again shortly.
         </p>
       )}
@@ -61,8 +61,8 @@ export default function StatusPage() {
 
       <Suspense
         fallback={
-          <div className="rounded-xl border p-6">
-            <p className="text-gray-500">
+          <div className="rounded-xl border bg-card text-card-foreground p-6">
+            <p className="text-muted-foreground">
               Checking services...
             </p>
           </div>

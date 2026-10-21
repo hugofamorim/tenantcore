@@ -1,5 +1,7 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/native-select";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId, useState, type ReactNode } from "react";
@@ -136,7 +138,7 @@ function WorkspaceSidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
         {organizations.length > 0 && (
-          <div className="mb-7 rounded-xl border bg-background/70 p-3">
+          <div className="mb-7 rounded-xl border bg-card text-card-foreground p-3">
             <label
               htmlFor={selectorId}
               className="mb-2 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
@@ -144,7 +146,7 @@ function WorkspaceSidebar({
               Active organization
             </label>
             <div className="relative">
-              <select
+              <NativeSelect
                 id={selectorId}
                 value={organization?.id ?? ""}
                 className="w-full min-w-0 appearance-none rounded-md border border-input bg-card py-2.5 pl-3 pr-8 text-sm font-medium text-foreground"
@@ -163,7 +165,7 @@ function WorkspaceSidebar({
                     {item.name} · {item.slug}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               <ChevronsUpDown
                 className="pointer-events-none absolute right-2.5 top-3 size-4 text-muted-foreground"
                 aria-hidden="true"
@@ -212,7 +214,7 @@ function WorkspaceSidebar({
             );
           })}
         </nav>
-        <div className="mt-8 rounded-xl border border-dashed p-3.5">
+        <div className="mt-8 rounded-xl border border-dashed bg-card text-card-foreground p-3.5">
           <ShieldCheck
             className="mb-2 size-4 text-primary"
             aria-hidden="true"
