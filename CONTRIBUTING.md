@@ -12,6 +12,17 @@ Run frozen-lockfile install, Prisma generate, lint, typecheck, tests and build.
 HTTP/browser tests require the isolated `tenantcore_test` database and private
 SMTP capture; never point them at development/production. Browser project groups
 start fresh servers to preserve real rate limits. See README for all commands.
+Next browser servers use an ignored `.next-e2e` directory so they do not compete
+with a developer's `.next/dev` lock. Run the normal typecheck after browser tests
+to regenerate Next's default type references. Run HTTP and browser suites
+sequentially against the shared test database.
+
+For visual changes, follow the [UI foundation guide](docs/architecture/ui-foundation.md).
+Keep shadcn primitives separate from domain controllers; use semantic theme tokens
+and respect reduced motion. Verify keyboard/focus behavior, real API states and
+mobile overflow, and inspect screenshots in light/dark themes. Axe audits cover
+the changed dashboard and complement functional tests; they are not a declaration
+of complete accessibility compliance.
 
 Tenant authorization belongs to the API: verified identity, current membership,
 organization-relative role and scoped resource lookup on every operation. Share

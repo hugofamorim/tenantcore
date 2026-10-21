@@ -1,11 +1,18 @@
 import { test, expect, type BrowserContext } from "@playwright/test";
 import { emailFragment } from "./helpers/mailpit";
+import { expectAccessiblePage } from "./helpers/accessibility";
 
 test("real dashboard metrics, tenant isolation, profile settings and accessible failure states", async ({
   page,
   context,
   browser,
 }) => {
+  test.setTimeout(120_000);
+  const hydrationErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" && /hydrat/i.test(message.text()))
+      hydrationErrors.push(message.text());
+  });
   const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 14);
   const ownerEmail = `dash-owner-${suffix}@example.test`;
   const viewerEmail = `dash-viewer-${suffix}@example.test`;
@@ -61,21 +68,18 @@ test("real dashboard metrics, tenant isolation, profile settings and accessible 
       .organization.id;
   }
   const first = await create("Northstar Metrics", `dash-${suffix}-a`);
-  const second = await create("Harbor Metrics", `dash-${suffix}-b`);
+  const longOrganizationName = `Harbor ${"W".repeat(60)}`;
+  const second = await create(longOrganizationName, `dash-${suffix}-b`);
   await page.goto(`/organizations/${first}/dashboard`);
-  const total = page
-    .getByRole("article")
-    .filter({
-      has: page.getByRole("heading", { name: "Total members", exact: true }),
-    });
-  const pending = page
-    .getByRole("article")
-    .filter({
-      has: page.getByRole("heading", {
-        name: "Pending invitations",
-        exact: true,
-      }),
-    });
+  const total = page.getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Total members", exact: true }),
+  });
+  const pending = page.getByRole("article").filter({
+    has: page.getByRole("heading", {
+      name: "Pending invitations",
+      exact: true,
+    }),
+  });
   await expect(total.getByText("1", { exact: true })).toBeVisible();
   expect(
     (
@@ -135,7 +139,101 @@ test("real dashboard metrics, tenant isolation, profile settings and accessible 
   ).not.toContainText("Invitation accepted");
   await page.goto(`/organizations/${first}/dashboard`);
   await expect(total.getByText("2", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Workspace navigation" })
+      .getByRole("link", { name: "Dashboard", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await page.setViewportSize({ width: 1280, height: 960 });
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Light", exact: true }).click();
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
+  await expectAccessiblePage(page);
+  const accountMenu = page.getByRole("button", { name: "Account menu" });
+  await accountMenu.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("menuitem", { name: "Account settings" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(accountMenu).toBeFocused();
+  await page
+    .getByRole("main")
+    .evaluate((element) => element.focus({ preventScroll: true }));
   await page.screenshot({ path: "test-results/dashboard.png", fullPage: true });
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Dark", exact: true }).click();
+  await page.reload();
+  await expect(total.getByText("2", { exact: true })).toBeVisible();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expectAccessiblePage(page);
+  await page
+    .getByRole("main")
+    .evaluate((element) => element.focus({ preventScroll: true }));
+  await page.screenshot({
+    path: "test-results/dashboard-dark.png",
+    fullPage: true,
+  });
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await page
+    .getByRole("menuitemradio", { name: "System", exact: true })
+    .click();
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "Refresh dashboard" }).click();
+  await expect(total.getByText("2", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Organization metrics" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Organization metrics" }).locator(".."),
+  ).toHaveCSS("transform", "none");
+  await page.setViewportSize({ width: 390, height: 844 });
+  const navigationTrigger = page.getByRole("button", {
+    name: "Open workspace navigation",
+  });
+  await navigationTrigger.focus();
+  await page.keyboard.press("Enter");
+  const navigationDialog = page.getByRole("dialog", {
+    name: "Workspace navigation",
+  });
+  await expect(navigationDialog).toBeVisible();
+  await expectAccessiblePage(page);
+  await page.screenshot({
+    path: "test-results/dashboard-navigation-mobile.png",
+  });
+  await navigationDialog
+    .getByRole("button", { name: "Close", exact: true })
+    .focus();
+  await page.keyboard.press("Tab");
+  await expect(
+    navigationDialog.getByRole("link", { name: "TenantCore", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(navigationDialog).toBeHidden();
+  await expect(navigationTrigger).toBeFocused();
+  await navigationTrigger.click();
+  await navigationDialog
+    .getByRole("link", { name: "Settings", exact: true })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/organizations/${first}/settings$`));
+  await expect(navigationDialog).toBeHidden();
+  await navigationTrigger.click();
+  await page
+    .getByRole("dialog", { name: "Workspace navigation" })
+    .getByRole("link", { name: "Dashboard", exact: true })
+    .click();
+  await expect(total.getByText("2", { exact: true })).toBeVisible();
+  await expectAccessiblePage(page);
+  await page.setViewportSize({ width: 768, height: 1024 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(
@@ -146,6 +244,18 @@ test("real dashboard metrics, tenant isolation, profile settings and accessible 
     path: "test-results/dashboard-mobile.png",
     fullPage: true,
   });
+  await page.goto(`/organizations/${second}`);
+  await expect(
+    page.getByRole("heading", { name: longOrganizationName, exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.goto(`/organizations/${first}/dashboard`);
+  await expect(total.getByText("2", { exact: true })).toBeVisible();
+  expect(hydrationErrors).toEqual([]);
   await page.route("**/api/organizations/*/dashboard", (route) =>
     route.fulfill({ status: 503, contentType: "application/json", body: "{}" }),
   );

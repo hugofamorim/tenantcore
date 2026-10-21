@@ -147,7 +147,16 @@ back to the account/organizations.
 
 ![Administrative dashboard captured from real API/browser activity](docs/screenshots/dashboard.png)
 
-[Mobile dashboard](docs/screenshots/dashboard-mobile.png).
+[Mobile dashboard](docs/screenshots/dashboard-mobile.png) ·
+[Dark dashboard](docs/screenshots/dashboard-dark.png) ·
+[Mobile navigation](docs/screenshots/dashboard-navigation-mobile.png).
+
+The workspace UI uses owned shadcn/ui components, semantic light/dark/system
+themes, a responsive navigation sheet and subtle reduced-motion-aware dashboard
+transitions. See the [UI foundation guide](docs/architecture/ui-foundation.md)
+and [staged UI plan](docs/ui-implementation-plan.md); authentication and management
+form redesigns remain later slices.
+
 Use the [isolated local demo guide](docs/operations/local-demo.md) for three
 fictional identities, two organizations and different per-tenant roles, without
 touching development/test data. The seed requires an operator-selected fictional
