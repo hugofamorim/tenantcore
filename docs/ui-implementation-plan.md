@@ -39,6 +39,21 @@ The local developer server was preserved; browser test output is isolated.
 Real captures are linked in README. The PR records final Linux CI evidence;
 public demonstration hosting remains deferred independently of this UI delivery.
 
+## Theme consistency follow-up
+
+Legacy cards and form surfaces now share the dashboard's semantic palette across
+authentication, account, organization, membership, audit and public screens.
+Native role/organization selects share a component, explicit option colors and
+the root color scheme. This corrects theme coverage without bringing forward
+the later screen redesigns or changing API behavior.
+
+All 41 frontend component tests and six Chromium journeys passed locally. The
+new appearance journey compares rendered colors in both themes and audits account
+and invitation accessibility; dark captures are linked in README. On Windows,
+the initial default Vitest run failed to start its workers before executing tests;
+a separate run with `--maxWorkers=2` passed all 41. CI retains the default command.
+Final published quality-gate evidence is recorded in the PR.
+
 ## Review checklist
 
 - Real API data; no fabricated charts, growth figures or mock-only workflow.
